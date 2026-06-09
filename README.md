@@ -87,37 +87,57 @@ python main.py
 
 ---
 
-## 📦 Gerar o executável (`.exe`) com PyInstaller
+## 📦 Gerar o executável (`.exe`)
+
+> ⚠️ **Importante:** o `.exe` precisa ser **compilado no Windows**. O PyInstaller
+> não faz compilação cruzada — não dá para gerar um `.exe` do Windows a partir de
+> Linux ou macOS. Use uma das três formas abaixo.
+
+### Opção 1 — GitHub Actions (recomendada, **não precisa de Python no seu PC**)
+
+Este repositório já vem com um fluxo de CI (`.github/workflows/build.yml`) que
+**compila o `.exe` numa máquina Windows do próprio GitHub** a cada `push` para
+`main`. Para baixar o executável pronto:
+
+1. Faça o `push` do projeto para o GitHub.
+2. Abra a aba **Actions** do repositório e clique na execução mais recente de
+   *“Compilar OtimizadorPC (Windows .exe)”*.
+3. Na seção **Artifacts**, baixe **`OtimizadorPC-windows`** (um `.zip` com o
+   `OtimizadorPC.exe` dentro).
+
+> 💡 Dá para disparar o build manualmente em **Actions → Compilar OtimizadorPC →
+> Run workflow**. E, se você criar uma **tag** `v1.0.0` (por exemplo), o fluxo
+> ainda publica uma **Release** com o `.exe` anexado.
+
+### Opção 2 — `build.bat` (no seu Windows, com um duplo-clique)
+
+Se preferir gerar localmente, basta ter o **Python 3.11+** instalado e dar um
+**duplo-clique** em **`build.bat`** na raiz do projeto. Ele cria o ambiente
+virtual, instala as dependências, roda o PyInstaller e deixa o resultado em
+`dist\OtimizadorPC.exe`.
+
+### Opção 3 — PyInstaller manual (avançado)
 
 Com as dependências instaladas (o `pyinstaller` já vem no `requirements.txt`),
-rode na **raiz do projeto**, no Windows:
+rode na **raiz do projeto**, no Windows, usando a receita já pronta:
 
 ```bat
-pyinstaller --onefile --console --name OtimizadorPC --add-data "dados\servicos_seguros.json;dados" --hidden-import win32timezone --hidden-import wmi main.py
+pyinstaller --noconfirm --clean OtimizadorPC.spec
 ```
 
-Detalhes:
+O arquivo **`OtimizadorPC.spec`** já embute a lista de serviços
+(`dados\servicos_seguros.json`) e declara os *hidden imports* do WMI/pywin32
+(como `win32timezone`) que o PyInstaller costuma não detectar sozinho.
 
-- `--onefile` gera um único `OtimizadorPC.exe` (em `dist\`).
-- `--add-data "dados\servicos_seguros.json;dados"` embute a lista de serviços
-  (no Windows o separador é `;`).
-- `--hidden-import win32timezone --hidden-import wmi` garantem que os módulos do
-  WMI/pywin32 entrem no pacote.
+Detalhes de todas as opções:
+
+- Geram um único `OtimizadorPC.exe` em `dist\` (modo *onefile*, console).
+- O executável final **não** exige Python instalado.
 - As pastas `logs\` e `backups\` são criadas automaticamente **ao lado do
   `.exe`** na primeira execução.
-
-### (Opcional) já abrir pedindo administrador
-
-Se quiser que o `.exe` **sempre** abra solicitando elevação, adicione
-`--uac-admin`:
-
-```bat
-pyinstaller --onefile --console --name OtimizadorPC --uac-admin --add-data "dados\servicos_seguros.json;dados" --hidden-import win32timezone --hidden-import wmi main.py
-```
-
-> Observação: com `--uac-admin`, mesmo o diagnóstico (que não precisa de admin)
-> abrirá o UAC. Sem essa opção, o próprio programa oferece a elevação quando
-> necessário — comportamento recomendado.
+- Por padrão, o `.exe` **não** abre pedindo administrador: o próprio programa
+  oferece a elevação (UAC) só quando você escolhe aplicar um ajuste —
+  comportamento recomendado, pois o diagnóstico funciona sem admin.
 
 ---
 
@@ -129,6 +149,9 @@ otimizador-pc/
 ├── config.py                   # Constantes e estado global
 ├── requirements.txt
 ├── README.md
+├── OtimizadorPC.spec           # Receita de build do PyInstaller
+├── build.bat                   # Gera o .exe no Windows (duplo-clique)
+├── .github/workflows/build.yml # CI: compila o .exe no Windows do GitHub
 ├── modulos/
 │   ├── diagnostico.py          # Detecção de hardware/software (leitura)
 │   ├── recomendacoes.py        # Análise do perfil + sugestões

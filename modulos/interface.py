@@ -13,7 +13,6 @@ Padrão de cores (definido em :mod:`config`):
 from __future__ import annotations
 
 import os
-import sys
 from typing import Iterable, Optional, Sequence
 
 import questionary
