@@ -1,154 +1,170 @@
-# Otimizador PC
+<div align="center">
 
-Programa de terminal (TUI) em **português do Brasil** para **diagnóstico e
-ajustes seguros** de computadores **Windows 10 e 11**.
+# ⚙️ Otimizador PC
 
-O foco número 1 é **segurança**: o programa nunca aplica nada sem **descrever**
-o que fará, **criar backup / ponto de restauração**, **pedir confirmação** e
-**registrar tudo em log**. Toda alteração é **reversível**.
+### Diagnóstico e ajustes **seguros** para Windows 10 e 11 — direto do terminal, em português 🇧🇷
 
-> Fluxo do programa: **diagnosticar → analisar/recomendar → aplicar os ajustes
-> escolhidos** (sempre com backup antes).
+[![Build do .exe (Windows)](https://github.com/Caionickpi/otimizador-pc/actions/workflows/build.yml/badge.svg)](https://github.com/Caionickpi/otimizador-pc/actions/workflows/build.yml)
+![Versão](https://img.shields.io/badge/vers%C3%A3o-1.1.0-blue)
+![Plataforma](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
+![Interface](https://img.shields.io/badge/TUI-rich%20%2B%20questionary-ff69b4)
+![Idioma](https://img.shields.io/badge/idioma-Portugu%C3%AAs%20(BR)-009C3B)
+
+</div>
+
+---
+
+O **Otimizador PC** é um programa de terminal (TUI) que **diagnostica** o seu
+computador, **recomenda** melhorias com base no hardware real e **aplica
+ajustes seguros** — sempre com **backup**, **confirmação** e **registro em
+log**. O foco número 1 é **segurança**: **toda alteração é reversível** e nada
+acontece sem você aprovar.
+
+> **Fluxo:** 🔍 diagnosticar → 💡 analisar/recomendar → 🛠️ aplicar só o que você escolher *(com backup antes)*.
+
+## 📑 Índice
+
+- [✨ Recursos](#-recursos)
+- [🛡️ O que o programa nunca faz](#️-o-que-o-programa-nunca-faz)
+- [🖼️ Prévia da interface](#️-prévia-da-interface)
+- [📥 Baixar o executável (.exe)](#-baixar-o-executável-exe-pronto)
+- [▶️ Rodar a partir do código](#️-rodar-a-partir-do-código-fonte)
+- [🔨 Gerar o executável você mesmo](#-gerar-o-executável-você-mesmo)
+- [🗂️ Estrutura do projeto](#️-estrutura-do-projeto)
+- [↩️ Como desfazer alterações](#️-como-desfazer-alterações)
+- [🧾 Logs](#-logs)
+- [❓ Perguntas frequentes](#-perguntas-frequentes)
+- [⚠️ Aviso](#️-aviso)
 
 ---
 
 ## ✨ Recursos
 
-- **Diagnóstico completo** (somente leitura): sistema, CPU, RAM (com velocidade
-  dos módulos), discos (detecta **SSD x HDD** e saúde), GPU, placa-mãe/BIOS,
-  rede (IP/DNS), inicialização, plano de energia e **notebook x desktop**.
-- **Recomendações personalizadas** com base no hardware real (ex.: nunca sugere
-  desfragmentar SSD — sugere TRIM).
-- **Categorias de ajuste**, cada uma com backup + confirmação + log:
-  1. Limpeza de arquivos temporários
-  2. Gerenciamento de inicialização (reversível)
-  3. Otimização de serviços (apenas uma *whitelist* curada)
-  4. Plano de energia (adaptado a desktop/notebook)
-  5. Otimização de rede (flush DNS, renovar IP, Winsock, DNS rápido)
-  6. Efeitos visuais / desempenho
-  7. Otimização de disco (desfragmenta só HDD; TRIM em SSD)
-- **Mecanismos de segurança**: ponto de restauração do sistema, backup de
-  registro (`.reg`), **modo simulação (dry-run)**, confirmação dupla, **desfazer
-  última alteração** e logging completo.
+- **🔍 Diagnóstico completo** (somente leitura): sistema, CPU, RAM (com
+  velocidade dos módulos), discos (detecta **SSD × HDD** e saúde), GPU,
+  placa-mãe/BIOS, rede (IP/DNS), inicialização, plano de energia e
+  **notebook × desktop**.
+- **💡 Recomendações personalizadas** com base no hardware real (ex.: nunca
+  sugere desfragmentar SSD — sugere TRIM).
+- **🛠️ Categorias de ajuste**, cada uma com backup + confirmação + log:
 
----
+  | # | Categoria | O que faz |
+  |---|-----------|-----------|
+  | 🧹 | **Limpeza** | Remove temporários, cache do Windows Update, Lixeira e miniaturas |
+  | 🚀 | **Inicialização** | Liga/desliga programas que abrem com o Windows (reversível) |
+  | 🛠 | **Serviços** | Ajusta apenas serviços de uma *whitelist* curada e segura |
+  | 🔋 | **Energia** | Planos adaptados a desktop/notebook |
+  | 🌐 | **Rede** | Flush DNS, renovar IP, resetar Winsock, DNS mais rápido |
+  | ✨ | **Efeitos visuais** | Prioriza desempenho desligando animações pesadas |
+  | 💽 | **Disco** | Desfragmenta **só HDD**; faz **TRIM** em SSD |
+
+- **🔒 Mecanismos de segurança**: ponto de restauração do sistema, backup de
+  registro (`.reg`), **modo simulação (dry-run)**, confirmação dupla,
+  **desfazer última alteração** e logging completo.
 
 ## 🛡️ O que o programa **nunca** faz
 
-- Nunca desativa antivírus, Windows Defender ou firewall.
-- Nunca apaga arquivos pessoais (documentos, fotos, downloads, área de
+- ❌ Nunca desativa antivírus, Windows Defender ou firewall.
+- ❌ Nunca apaga arquivos pessoais (documentos, fotos, downloads, área de
   trabalho). Só mexe em **cache/temporários conhecidos**.
-- Nunca toca em serviços/chaves críticos que impeçam o Windows de iniciar.
-- Nunca faz alteração irreversível sem confirmação explícita e backup prévio.
+- ❌ Nunca toca em serviços/chaves críticos que impeçam o Windows de iniciar.
+- ❌ Nunca faz alteração irreversível sem confirmação explícita e backup prévio.
 
----
+## 🖼️ Prévia da interface
 
-## 📋 Requisitos
+```text
+╔════════════════════════════════════════════════════════════════════╗
+║                                                                    ║
+║      ⚙  Otimizador PC  v1.1.0                                      ║
+║                                                                    ║
+║      Diagnóstico e ajustes seguros para Windows 10 e 11            ║
+║                                                                    ║
+║      🛡  Sempre cria backup e pede confirmação antes de mexer.      ║
+║      Nada é alterado sem a sua aprovação.                          ║
+║                                                                    ║
+║      Foco total em segurança e reversibilidade.                    ║
+║                                                                    ║
+╚════════════════════════════════════════════════════════════════════╝
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  ⚙  Otimizador PC  v1.1.0                                          ┃
+┃  Privilégio: ✔ administrador   │   🧪 Simulação: ○ desligado       ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-- **Windows 10 ou 11** (x64).
-- **Python 3.11+** — necessário apenas para rodar a partir do código-fonte ou
-  para gerar o `.exe`. O executável final **não** exige Python instalado.
+  » Escolha uma opção:  (use as setas, Enter para confirmar)
 
----
+    1)  🔍  Diagnóstico do computador
+    2)  💡  Recomendações personalizadas
+    ─── Ajustes ───
+    3)  🧹  Limpeza de arquivos temporários
+    4)  🚀  Gerenciar inicialização
+    5)  🛠  Otimizar serviços
+    6)  🔋  Plano de energia
+    7)  🌐  Otimização de rede
+    8)  ✨  Efeitos visuais / desempenho
+    9)  💽  Otimização de disco
+    ─── Ferramentas ───
+   10)  🧪  Modo simulação (ligar)
+   11)  ↩  Desfazer última alteração
+   12)  📜  Ver logs
+    0)  🚪  Sair
+```
 
-## 🚀 Instalação (a partir do código-fonte)
+## 📥 Baixar o executável (.exe) pronto
 
-1. Abra o **Prompt de Comando** ou **PowerShell** na pasta do projeto.
-2. (Recomendado) crie um ambiente virtual:
+A forma mais fácil — **não precisa instalar Python**:
 
-   ```bat
-   python -m venv .venv
-   .venv\Scripts\activate
-   ```
+1. Vá em **[Releases](https://github.com/Caionickpi/otimizador-pc/releases)** e
+   baixe o `OtimizadorPC.exe` da versão mais recente; **ou**
+2. Vá na aba **[Actions](https://github.com/Caionickpi/otimizador-pc/actions/workflows/build.yml)**,
+   abra a execução mais recente e baixe o artifact **`OtimizadorPC-windows`**.
 
-3. Instale as dependências:
+Depois é só **dar um duplo-clique**. Para aplicar ajustes, clique com o botão
+direito → **“Executar como administrador”** *(o diagnóstico e as recomendações
+funcionam sem admin)*.
 
-   ```bat
-   pip install -r requirements.txt
-   ```
+## ▶️ Rodar a partir do código-fonte
 
----
-
-## ▶️ Como rodar
+Requer **Windows 10/11** e **Python 3.11+**.
 
 ```bat
+:: 1) (recomendado) crie um ambiente virtual
+python -m venv .venv
+.venv\Scripts\activate
+
+:: 2) instale as dependências
+pip install -r requirements.txt
+
+:: 3) rode
 python main.py
 ```
 
-- O **diagnóstico** e as **recomendações** funcionam **sem** privilégios de
-  administrador.
-- Para **aplicar ajustes**, o programa detecta se você é administrador e, se
-  não for, **oferece reabrir elevado** (vai aparecer o aviso do Windows/UAC).
-- Para já começar com tudo liberado, você também pode abrir o
-  **Prompt de Comando como administrador** e rodar `python main.py`.
+> 💡 **Dica:** ative o **Modo simulação** (opção 10) para ver exatamente o que
+> cada ajuste faria, **sem alterar nada**.
 
-> 💡 **Dica:** ative o **Modo simulação** (opção 10 do menu) para ver exatamente
-> o que cada ajuste faria, sem alterar nada.
+## 🔨 Gerar o executável você mesmo
 
----
+> ⚠️ O `.exe` precisa ser **compilado no Windows** — o PyInstaller não faz
+> compilação cruzada (não dá para gerar um `.exe` a partir de Linux/macOS).
 
-## 📦 Gerar o executável (`.exe`)
+| Forma | Como | Precisa de Python? |
+|-------|------|:------------------:|
+| 🤖 **GitHub Actions** | Já configurado: a cada `push`, o `.exe` é compilado numa máquina Windows do GitHub e fica disponível em **Actions → Artifacts** | ❌ Não |
+| 🖱️ **`build.bat`** | **Duplo-clique** no arquivo `build.bat` na raiz do projeto | ✅ Sim |
+| ⌨️ **PyInstaller** | `pyinstaller --noconfirm --clean OtimizadorPC.spec` | ✅ Sim |
 
-> ⚠️ **Importante:** o `.exe` precisa ser **compilado no Windows**. O PyInstaller
-> não faz compilação cruzada — não dá para gerar um `.exe` do Windows a partir de
-> Linux ou macOS. Use uma das três formas abaixo.
-
-### Opção 1 — GitHub Actions (recomendada, **não precisa de Python no seu PC**)
-
-Este repositório já vem com um fluxo de CI (`.github/workflows/build.yml`) que
-**compila o `.exe` numa máquina Windows do próprio GitHub** a cada `push` para
-`main`. Para baixar o executável pronto:
-
-1. Faça o `push` do projeto para o GitHub.
-2. Abra a aba **Actions** do repositório e clique na execução mais recente de
-   *“Compilar OtimizadorPC (Windows .exe)”*.
-3. Na seção **Artifacts**, baixe **`OtimizadorPC-windows`** (um `.zip` com o
-   `OtimizadorPC.exe` dentro).
-
-> 💡 Dá para disparar o build manualmente em **Actions → Compilar OtimizadorPC →
-> Run workflow**. E, se você criar uma **tag** `v1.0.0` (por exemplo), o fluxo
-> ainda publica uma **Release** com o `.exe` anexado.
-
-### Opção 2 — `build.bat` (no seu Windows, com um duplo-clique)
-
-Se preferir gerar localmente, basta ter o **Python 3.11+** instalado e dar um
-**duplo-clique** em **`build.bat`** na raiz do projeto. Ele cria o ambiente
-virtual, instala as dependências, roda o PyInstaller e deixa o resultado em
-`dist\OtimizadorPC.exe`.
-
-### Opção 3 — PyInstaller manual (avançado)
-
-Com as dependências instaladas (o `pyinstaller` já vem no `requirements.txt`),
-rode na **raiz do projeto**, no Windows, usando a receita já pronta:
-
-```bat
-pyinstaller --noconfirm --clean OtimizadorPC.spec
-```
-
-O arquivo **`OtimizadorPC.spec`** já embute a lista de serviços
-(`dados\servicos_seguros.json`) e declara os *hidden imports* do WMI/pywin32
-(como `win32timezone`) que o PyInstaller costuma não detectar sozinho.
-
-Detalhes de todas as opções:
-
-- Geram um único `OtimizadorPC.exe` em `dist\` (modo *onefile*, console).
-- O executável final **não** exige Python instalado.
-- As pastas `logs\` e `backups\` são criadas automaticamente **ao lado do
-  `.exe`** na primeira execução.
-- Por padrão, o `.exe` **não** abre pedindo administrador: o próprio programa
-  oferece a elevação (UAC) só quando você escolhe aplicar um ajuste —
-  comportamento recomendado, pois o diagnóstico funciona sem admin.
-
----
+O resultado é um único `dist\OtimizadorPC.exe` (modo *onefile*, console). As
+pastas `logs\` e `backups\` são criadas **ao lado do `.exe`** na primeira
+execução. A receita `OtimizadorPC.spec` já embute a whitelist de serviços e os
+*hidden imports* do WMI/pywin32 (como `win32timezone`).
 
 ## 🗂️ Estrutura do projeto
 
-```
+```text
 otimizador-pc/
 ├── main.py                     # Ponto de entrada e menu principal
-├── config.py                   # Constantes e estado global
+├── config.py                   # Constantes, versão e estado global
 ├── requirements.txt
-├── README.md
 ├── OtimizadorPC.spec           # Receita de build do PyInstaller
 ├── build.bat                   # Gera o .exe no Windows (duplo-clique)
 ├── .github/workflows/build.yml # CI: compila o .exe no Windows do GitHub
@@ -157,7 +173,7 @@ otimizador-pc/
 │   ├── recomendacoes.py        # Análise do perfil + sugestões
 │   ├── seguranca.py            # Restauração, backups, logging, desfazer
 │   ├── interface.py            # Componentes da TUI (rich + questionary)
-│   ├── elevacao.py             # Privilégios de administrador
+│   ├── elevacao.py             # Privilégios de administrador (UAC)
 │   └── tweaks/
 │       ├── limpeza.py
 │       ├── inicializacao.py
@@ -172,25 +188,53 @@ otimizador-pc/
 └── backups/                    # Backups de registro (.reg) e histórico
 ```
 
----
-
 ## ↩️ Como desfazer alterações
 
-- **Desfazer última alteração** (opção 11 do menu) reverte a última mudança
-  registrada (serviço, DNS, plano de energia, inicialização ou efeitos visuais).
-- Os **backups de registro** ficam em `backups\*.reg`. Você pode aplicá-los
-  manualmente dando duplo clique ou com `reg import "arquivo.reg"`.
+- **Desfazer última alteração** (opção 11) reverte a última mudança registrada
+  (serviço, DNS, plano de energia, inicialização ou efeitos visuais).
+- Os **backups de registro** ficam em `backups\*.reg` — aplique-os manualmente
+  com duplo-clique ou `reg import "arquivo.reg"`.
 - Em último caso, use a **Restauração do Sistema** do Windows (o programa cria
   um ponto antes de cada sessão de alterações).
-
----
 
 ## 🧾 Logs
 
 Cada execução grava em `logs\otimizador_AAAA-MM-DD.log`, com data, hora, ação e
 resultado (sucesso/erro). Veja-os pelo menu (opção 12) ou abrindo o arquivo.
 
----
+## ❓ Perguntas frequentes
+
+<details>
+<summary><b>Preciso ser administrador?</b></summary>
+
+Não para **diagnosticar** e ver **recomendações**. Para **aplicar ajustes**, o
+programa detecta se você é admin e, se não for, oferece reabrir elevado (vai
+aparecer o aviso do Windows/UAC).
+</details>
+
+<details>
+<summary><b>É seguro? Pode quebrar meu Windows?</b></summary>
+
+O programa é conservador: só mexe em itens conhecidos de uma lista curada,
+sempre cria backup antes e pede confirmação. Ainda assim, mexer no sistema
+sempre envolve algum risco — mantenha backups dos seus dados e use o
+**Modo simulação** se estiver em dúvida.
+</details>
+
+<details>
+<summary><b>O antivírus reclamou do .exe. É vírus?</b></summary>
+
+Não. É um falso positivo comum com executáveis gerados por PyInstaller. Por
+isso a compressão UPX foi **desligada** de propósito, para reduzir esses
+alertas. Você pode compilar o `.exe` você mesmo (veja acima) se preferir.
+</details>
+
+<details>
+<summary><b>Funciona no Windows 7 / 8?</b></summary>
+
+O alvo oficial é **Windows 10 e 11** (x64). Em versões mais antigas, parte das
+detecções (ex.: SSD × HDD) pode não funcionar.
+</details>
 
 ## ⚠️ Aviso
 
@@ -198,3 +242,11 @@ Esta ferramenta foi feita para ser conservadora e segura, mas mexer em um
 sistema operacional sempre envolve algum risco. Use com responsabilidade,
 mantenha backups dos seus dados importantes e prefira o **Modo simulação** se
 estiver em dúvida.
+
+<div align="center">
+
+---
+
+Feito com ❤️ e 🐍 para deixar o Windows mais rápido **com segurança**.
+
+</div>

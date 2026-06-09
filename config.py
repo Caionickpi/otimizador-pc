@@ -20,7 +20,7 @@ from typing import Any
 # Identidade do programa
 # ---------------------------------------------------------------------------
 NOME_APP: str = "Otimizador PC"
-VERSAO_APP: str = "1.0.0"
+VERSAO_APP: str = "1.1.0"
 DESCRICAO_APP: str = "Diagnóstico e ajustes seguros para Windows 10 e 11"
 
 # ---------------------------------------------------------------------------
