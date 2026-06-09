@@ -17,6 +17,15 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Publicar um release com esta tag (ex.: v1.1.0). Deixe vazio para só compilar."
+        required: false
+        default: ""
+      target:
+        description: "Branch/commit alvo da tag do release."
+        required: false
+        default: "main"
 
 permissions:
   contents: write
@@ -62,13 +71,29 @@ jobs:
           path: dist/OtimizadorPC.exe
           if-no-files-found: error
 
-      - name: Publicar Release com o .exe (somente em tags v*)
-        if: startsWith(github.ref, 'refs/tags/v')
+      # Publica um Release com o .exe anexado quando:
+      #   * uma tag v* e' enviada (push), OU
+      #   * o workflow e' disparado manualmente com um 'tag' informado.
+      # Em disparo manual, o proprio runner cria a tag (gh release create
+      # --target ...), o que dispensa enviar a tag pelo git.
+      - name: Publicar Release com o .exe
+        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '')
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          notes=$'📥 Baixe o **OtimizadorPC.exe** na seção *Assets* abaixo — não precisa de Python instalado.\n\n• Duplo-clique para abrir (diagnóstico e recomendações funcionam sem admin).\n• Para aplicar ajustes: clique com o botão direito → **Executar como administrador**.\n\nExecutável para Windows 10/11, compilado automaticamente pelo GitHub Actions a partir do código desta tag.'
-          gh release create "${GITHUB_REF_NAME}" "dist/OtimizadorPC.exe" \
-            --title "Otimizador PC ${GITHUB_REF_NAME}" \
-            --notes "$notes"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+            TARGET_ARG="--target ${{ github.event.inputs.target }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+            TARGET_ARG=""
+          fi
+          notes=$'📥 Baixe o **OtimizadorPC.exe** na seção *Assets* abaixo — não precisa de Python instalado.\n\n• Duplo-clique para abrir (diagnóstico e recomendações funcionam sem admin).\n• Para aplicar ajustes: clique com o botão direito → **Executar como administrador**.\n\nExecutável para Windows 10/11, compilado automaticamente pelo GitHub Actions.'
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "dist/OtimizadorPC.exe" --clobber
+          else
+            gh release create "$TAG" "dist/OtimizadorPC.exe" $TARGET_ARG \
+              --title "Otimizador PC $TAG" \
+              --notes "$notes"
+          fi
