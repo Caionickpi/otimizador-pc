@@ -68,6 +68,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          notes=$'📥 Baixe o **OtimizadorPC.exe** na seção *Assets* abaixo — não precisa de Python instalado.\n\n• Duplo-clique para abrir (diagnóstico e recomendações funcionam sem admin).\n• Para aplicar ajustes: clique com o botão direito → **Executar como administrador**.\n\nExecutável para Windows 10/11, compilado automaticamente pelo GitHub Actions a partir do código desta tag.'
           gh release create "${GITHUB_REF_NAME}" "dist/OtimizadorPC.exe" \
             --title "Otimizador PC ${GITHUB_REF_NAME}" \
-            --notes "Executavel para Windows 10/11 gerado automaticamente pelo GitHub Actions."
+            --notes "$notes"
