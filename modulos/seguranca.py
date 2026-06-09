@@ -375,7 +375,9 @@ def registrar_desfazer(
         modulo: categoria da ação (ex.: 'servicos').
         descricao: texto legível mostrado ao usuário no "Desfazer".
         tipo: identificador do tipo de rollback. Tipos suportados:
-            'reg_import'   -> dados['arquivo']
+            'reg_import'   -> dados['arquivo'] (ou dados['arquivos'])
+            'reg_valores'  -> dados['snapshots'] (ajustes avançados)
+            'comando'      -> dados['comando'] (lista) [, dados['ok_msg']]
             'servico'      -> dados['nome'], dados['start_original']
             'dns'          -> dados['interface'], dados['dns_original']
             'plano_energia'-> dados['guid_anterior']
@@ -469,6 +471,22 @@ def _aplicar_desfazer(entrada: dict[str, Any]) -> tuple[bool, str]:
 
         if tipo == "inicializacao":
             return _desfazer_inicializacao(dados)
+
+        if tipo == "reg_valores":
+            # Ajuste avançado: restaura/remove valores de registro com precisão.
+            from modulos.tweaks import avancado
+
+            return avancado.desfazer_reg_valores(dados)
+
+        if tipo == "comando":
+            # Reversão genérica via um comando do sistema (ex.: 'powercfg -h on').
+            cmd = dados.get("comando")
+            if not cmd:
+                return False, "Nenhum comando de reversão associado a esta ação."
+            codigo, _s, err = executar_comando(cmd, timeout=120)
+            if codigo == 0:
+                return True, dados.get("ok_msg", "Alteração revertida com sucesso.")
+            return False, f"Falha ao reverter: {err or codigo}"
 
         return False, f"Tipo de desfazer desconhecido: {tipo}"
     except Exception as exc:  # noqa: BLE001
