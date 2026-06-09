@@ -5,7 +5,7 @@
 ### Diagnóstico e ajustes **seguros** para Windows 10 e 11 — direto do terminal, em português 🇧🇷
 
 [![Build do .exe (Windows)](https://github.com/Caionickpi/otimizador-pc/actions/workflows/build.yml/badge.svg)](https://github.com/Caionickpi/otimizador-pc/actions/workflows/build.yml)
-![Versão](https://img.shields.io/badge/vers%C3%A3o-1.1.0-blue)
+![Versão](https://img.shields.io/badge/vers%C3%A3o-1.2.0-blue)
 ![Plataforma](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![Interface](https://img.shields.io/badge/TUI-rich%20%2B%20questionary-ff69b4)
@@ -26,6 +26,7 @@ acontece sem você aprovar.
 ## 📑 Índice
 
 - [✨ Recursos](#-recursos)
+- [🔥 Aba Avançados (jogos e desempenho)](#-aba-avançados-jogos-e-desempenho)
 - [🛡️ O que o programa nunca faz](#️-o-que-o-programa-nunca-faz)
 - [🖼️ Prévia da interface](#️-prévia-da-interface)
 - [📥 Baixar o executável (.exe)](#-baixar-o-executável-exe-pronto)
@@ -58,10 +59,40 @@ acontece sem você aprovar.
   | 🌐 | **Rede** | Flush DNS, renovar IP, resetar Winsock, DNS mais rápido |
   | ✨ | **Efeitos visuais** | Prioriza desempenho desligando animações pesadas |
   | 💽 | **Disco** | Desfragmenta **só HDD**; faz **TRIM** em SSD |
+  | 🔥 | **Avançado** | Otimizações "pesadas" para **jogos e desempenho máximo** (risco médio/alto) — veja abaixo |
 
 - **🔒 Mecanismos de segurança**: ponto de restauração do sistema, backup de
   registro (`.reg`), **modo simulação (dry-run)**, confirmação dupla,
   **desfazer última alteração** e logging completo.
+
+## 🔥 Aba Avançados (jogos e desempenho)
+
+> ⚠️ **Atenção:** esta é a parte **"pesada"** da otimização — ajustes de **risco
+> médio/alto** para usuários avançados. Vários exigem **administrador** e/ou
+> **reiniciar** o PC. **Todos continuam reversíveis** (backup `.reg` + ponto de
+> restauração + *Desfazer última alteração*), e cada um **avisa os riscos**
+> antes de aplicar. Na dúvida, use o **Modo simulação**.
+
+**🎮 Jogos**
+
+| Ajuste | O que faz | Risco |
+|--------|-----------|:-----:|
+| **Modo Jogo + desativar Game DVR** | Liga o Modo Jogo e desliga a gravação em segundo plano (consome CPU/GPU) | 🟡 Baixo–médio |
+| **Prioridade para jogos (MMCSS)** | Ajusta MMCSS e o agendador da CPU para priorizar o jogo em primeiro plano | 🟠 Médio |
+| **Agendamento de GPU por hardware (HAGS)** | Ativa o *Hardware-Accelerated GPU Scheduling* (reinício) | 🟠 Médio |
+| **Reduzir latência de rede (Nagle)** | Desativa o algoritmo de Nagle nas interfaces ativas para baixar o ping | 🟠 Médio |
+
+**⚡ Desempenho geral**
+
+| Ajuste | O que faz | Risco |
+|--------|-----------|:-----:|
+| **Plano "Desempenho Máximo"** | Cria/ativa o plano *Ultimate Performance* (sem economias de energia) | 🟠 Médio |
+| **Desativar limitação de energia da CPU** | Desliga o *Power Throttling* | 🟠 Médio |
+| **Manter o kernel na RAM** | `DisablePagingExecutive` (recomendado com 8 GB+; reinício) | 🟠 Médio |
+| **Desativar hibernação** | Remove o `hiberfil.sys` e libera vários GB de disco | 🟠 Médio |
+
+> 💡 Os ajustes de energia (Plano Máximo, *Power Throttling*) **não** são
+> indicados para notebook na bateria, pois aumentam o consumo e o aquecimento.
 
 ## 🛡️ O que o programa **nunca** faz
 
@@ -103,10 +134,12 @@ acontece sem você aprovar.
     7)  🌐  Otimização de rede
     8)  ✨  Efeitos visuais / desempenho
     9)  💽  Otimização de disco
+    ─── Avançado · risco ───
+   10)  🔥  Otimizações avançadas (jogos e desempenho)
     ─── Ferramentas ───
-   10)  🧪  Modo simulação (ligar)
-   11)  ↩  Desfazer última alteração
-   12)  📜  Ver logs
+   11)  🧪  Modo simulação (ligar)
+   12)  ↩  Desfazer última alteração
+   13)  📜  Ver logs
     0)  🚪  Sair
 ```
 
@@ -139,7 +172,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-> 💡 **Dica:** ative o **Modo simulação** (opção 10) para ver exatamente o que
+> 💡 **Dica:** ative o **Modo simulação** (opção 11) para ver exatamente o que
 > cada ajuste faria, **sem alterar nada**.
 
 ## 🔨 Gerar o executável você mesmo
@@ -181,7 +214,8 @@ otimizador-pc/
 │       ├── energia.py
 │       ├── rede.py
 │       ├── visual.py
-│       └── disco.py
+│       ├── disco.py
+│       └── avancado.py         # 🔥 Otimizações avançadas (jogos/desempenho)
 ├── dados/
 │   └── servicos_seguros.json   # Whitelist de serviços seguros
 ├── logs/                       # Logs (gerados em tempo de execução)
@@ -190,7 +224,7 @@ otimizador-pc/
 
 ## ↩️ Como desfazer alterações
 
-- **Desfazer última alteração** (opção 11) reverte a última mudança registrada
+- **Desfazer última alteração** (opção 12) reverte a última mudança registrada
   (serviço, DNS, plano de energia, inicialização ou efeitos visuais).
 - Os **backups de registro** ficam em `backups\*.reg` — aplique-os manualmente
   com duplo-clique ou `reg import "arquivo.reg"`.
@@ -200,7 +234,7 @@ otimizador-pc/
 ## 🧾 Logs
 
 Cada execução grava em `logs\otimizador_AAAA-MM-DD.log`, com data, hora, ação e
-resultado (sucesso/erro). Veja-os pelo menu (opção 12) ou abrindo o arquivo.
+resultado (sucesso/erro). Veja-os pelo menu (opção 13) ou abrindo o arquivo.
 
 ## ❓ Perguntas frequentes
 

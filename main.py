@@ -19,6 +19,7 @@ from typing import Any, Callable
 import config
 from modulos import diagnostico, elevacao, interface, recomendacoes, seguranca
 from modulos.tweaks import (
+    avancado,
     disco,
     energia,
     inicializacao,
@@ -193,10 +194,12 @@ def _menu_principal(estado: config.EstadoApp) -> None:
             ("7)  🌐  Otimização de rede", "rede"),
             ("8)  ✨  Efeitos visuais / desempenho", "visual"),
             ("9)  💽  Otimização de disco", "disco"),
+            interface.separador("Avançado · risco"),
+            ("10) 🔥  Otimizações avançadas (jogos e desempenho)", "avancado"),
             interface.separador("Ferramentas"),
-            (f"10) 🧪  Modo simulação ({'desligar' if estado.simulacao else 'ligar'})", "simulacao"),
-            ("11) ↩  Desfazer última alteração", "desfazer"),
-            ("12) 📜  Ver logs", "logs"),
+            (f"11) 🧪  Modo simulação ({'desligar' if estado.simulacao else 'ligar'})", "simulacao"),
+            ("12) ↩  Desfazer última alteração", "desfazer"),
+            ("13) 📜  Ver logs", "logs"),
             ("0)  🚪  Sair", "sair"),
         ]
         escolha = interface.menu_selecao("Escolha uma opção:", opcoes)
@@ -215,6 +218,7 @@ def _menu_principal(estado: config.EstadoApp) -> None:
             "rede": ("Rede", lambda: rede.menu(estado)),
             "visual": ("Efeitos visuais", lambda: visual.menu(estado)),
             "disco": ("Disco", lambda: disco.menu(estado)),
+            "avancado": ("Otimizações avançadas", lambda: avancado.menu(estado)),
             "simulacao": ("Modo simulação", lambda: _acao_simulacao(estado)),
             "desfazer": ("Desfazer", lambda: _acao_desfazer(estado)),
             "logs": ("Ver logs", lambda: _acao_ver_logs(estado)),
