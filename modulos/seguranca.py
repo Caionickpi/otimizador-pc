@@ -99,16 +99,43 @@ def registrar_acao(modulo: str, acao: str, sucesso: bool, detalhe: str = "") -> 
 # ---------------------------------------------------------------------------
 # Execução de comandos do sistema
 # ---------------------------------------------------------------------------
+def _codepage_oem() -> Optional[str]:
+    """Retorna o code page OEM do console no Windows (ex.: 'cp850'), se houver.
+
+    As ferramentas de console (powercfg, sc, ipconfig...) escrevem nesse code
+    page — usá-lo primeiro evita acentos trocados (ex.: nomes de planos de
+    energia). Fora do Windows, retorna ``None``.
+    """
+    if not sys.platform.startswith("win"):
+        return None
+    try:
+        import ctypes
+
+        return f"cp{int(ctypes.windll.kernel32.GetOEMCP())}"  # type: ignore[attr-defined]
+    except Exception:  # noqa: BLE001
+        return None
+
+
+# Ordem de tentativa: o code page real do console primeiro (Windows), depois
+# UTF-8 e os ANSI/OEM comuns. ``dict.fromkeys`` remove duplicatas mantendo a
+# ordem (caso o OEM já seja um dos demais).
+_CODIFICACOES_SAIDA: tuple[str, ...] = tuple(
+    dict.fromkeys(
+        cp for cp in (_codepage_oem(), "utf-8", "cp1252", "cp850", "latin-1") if cp
+    )
+)
+
+
 def _decodificar(dados: bytes) -> str:
-    """Decodifica a saída de comandos tentando os code pages comuns do Windows.
+    """Decodifica a saída de comandos tentando os code pages do Windows em ordem.
 
     Ferramentas de console do Windows costumam usar o code page OEM (ex.: cp850
-    em pt-BR) ou ANSI (cp1252), não UTF-8. Tentamos em cascata para que textos
-    acentuados (ex.: nomes de planos de energia) apareçam corretos.
+    em pt-BR), não UTF-8. Tentamos em cascata para que textos acentuados
+    apareçam corretos.
     """
     if not dados:
         return ""
-    for codificacao in ("utf-8", "cp1252", "cp850", "latin-1"):
+    for codificacao in _CODIFICACOES_SAIDA:
         try:
             return dados.decode(codificacao)
         except (UnicodeDecodeError, LookupError):

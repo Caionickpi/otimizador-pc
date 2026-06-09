@@ -13,10 +13,12 @@ Padrão de cores (definido em :mod:`config`):
 from __future__ import annotations
 
 import os
-from typing import Iterable, Optional, Sequence
+from typing import Any, Iterable, Optional, Sequence
 
 import questionary
-from questionary import Style
+from questionary import Separator, Style
+from rich import box
+from rich.align import Align
 from rich.console import Console
 from rich.markup import escape
 from rich.panel import Panel
@@ -125,23 +127,37 @@ def limpar_tela() -> None:
 
 def tela_boas_vindas() -> None:
     """Exibe a tela inicial com o nome do programa e o aviso de segurança."""
-    titulo = Text(config.NOME_APP, style=config.COR_TITULO, justify="center")
-    titulo.append(f"  v{config.VERSAO_APP}\n", style="dim")
+    titulo = Text(justify="center")
+    titulo.append("⚙  ", style="bold cyan")
+    titulo.append(config.NOME_APP, style=config.COR_DESTAQUE)
+    titulo.append(f"  v{config.VERSAO_APP}", style="dim")
+
     corpo = Text(justify="center")
-    corpo.append(f"{config.DESCRICAO_APP}\n\n", style=config.COR_NEUTRA)
-    corpo.append("Este programa SEMPRE cria backups e pede confirmação\n", style=config.COR_OK)
-    corpo.append("antes de alterar qualquer coisa. Nada é feito sem você aprovar.\n\n", style=config.COR_OK)
-    corpo.append("Foco em segurança e reversibilidade.", style="dim")
-    console.print(Panel(Text.assemble(titulo, "\n", corpo), border_style=config.COR_INFO, padding=(1, 4)))
+    corpo.append("\n")
+    corpo.append(f"{config.DESCRICAO_APP}\n\n", style=config.COR_INFO)
+    corpo.append("🛡  Sempre cria backup e pede confirmação antes de mexer.\n", style=config.COR_OK)
+    corpo.append("Nada é alterado sem a sua aprovação.\n\n", style=config.COR_OK)
+    corpo.append("Foco total em segurança e reversibilidade.", style="dim italic")
+
+    console.print(
+        Panel(
+            Align.center(Text.assemble(titulo, "\n", corpo)),
+            border_style=config.COR_INFO,
+            box=box.DOUBLE,
+            padding=(1, 6),
+        )
+    )
 
 
 def cabecalho(titulo: str, subtitulo: Optional[str] = None) -> None:
     """Imprime um cabeçalho de seção destacado."""
-    texto = _render(titulo, config.COR_TITULO)
+    texto = _render(titulo, config.COR_DESTAQUE)
     if subtitulo:
         texto.append("\n")
         texto.append_text(_render(subtitulo, "dim"))
-    console.print(Panel(texto, border_style=config.COR_INFO, expand=True))
+    console.print(
+        Panel(texto, border_style=config.COR_INFO, box=box.HEAVY, padding=(0, 2), expand=True)
+    )
 
 
 def _painel(mensagem: str, titulo: str, cor: str) -> None:
@@ -183,7 +199,15 @@ def linha_em_branco() -> None:
 # ---------------------------------------------------------------------------
 def nova_tabela(titulo: Optional[str] = None, colunas: Optional[Sequence[str]] = None) -> Table:
     """Cria uma tabela do rich já estilizada com o nosso padrão."""
-    tabela = Table(title=titulo, title_style=config.COR_TITULO, header_style=config.COR_DESTAQUE, expand=False)
+    tabela = Table(
+        title=titulo,
+        title_style=config.COR_TITULO,
+        title_justify="left",
+        header_style=config.COR_DESTAQUE,
+        border_style=config.COR_INFO,
+        box=box.ROUNDED,
+        expand=False,
+    )
     for coluna in colunas or []:
         tabela.add_column(coluna)
     return tabela
@@ -196,7 +220,15 @@ def imprimir_tabela(tabela: Table) -> None:
 
 def tabela_chave_valor(titulo: str, itens: Iterable[tuple[str, str]]) -> None:
     """Atalho para exibir uma tabela de duas colunas (Propriedade/Valor)."""
-    tabela = Table(title=titulo, title_style=config.COR_TITULO, show_header=False, expand=False)
+    tabela = Table(
+        title=titulo,
+        title_style=config.COR_TITULO,
+        title_justify="left",
+        show_header=False,
+        box=box.ROUNDED,
+        border_style=config.COR_INFO,
+        expand=False,
+    )
     tabela.add_column("Propriedade", style=config.COR_INFO, no_wrap=True)
     tabela.add_column("Valor", style=config.COR_NEUTRA)
     for chave, valor in itens:
@@ -234,18 +266,35 @@ def spinner(descricao: str) -> Progress:
 # ---------------------------------------------------------------------------
 # Interação (menus e confirmações)
 # ---------------------------------------------------------------------------
-def menu_selecao(titulo: str, opcoes: Sequence[tuple[str, object]]) -> Optional[object]:
+def separador(texto: str = "") -> Separator:
+    """Cria um separador visual para agrupar itens dentro de um menu.
+
+    Itens ``Separator`` não são selecionáveis; servem só para organizar
+    visualmente as opções (ex.: agrupar 'Ajustes' e 'Ferramentas').
+    """
+    return Separator(f"─── {texto} ───" if texto else "───────────")
+
+
+def menu_selecao(titulo: str, opcoes: Sequence[Any]) -> Optional[object]:
     """Exibe um menu de seleção única e retorna o valor escolhido.
 
     Args:
         titulo: pergunta/título do menu.
-        opcoes: lista de pares ``(rótulo_exibido, valor_retornado)``.
+        opcoes: lista de pares ``(rótulo_exibido, valor_retornado)``. Também
+            aceita objetos ``Separator`` (via :func:`separador`) para agrupar
+            visualmente as opções.
 
     Returns:
         O valor associado à opção escolhida, ou ``None`` se o usuário
         cancelar (Ctrl+C / Esc).
     """
-    escolhas = [questionary.Choice(title=rotulo, value=valor) for rotulo, valor in opcoes]
+    escolhas: list[Any] = []
+    for opcao in opcoes:
+        if isinstance(opcao, Separator):
+            escolhas.append(opcao)
+            continue
+        rotulo, valor = opcao
+        escolhas.append(questionary.Choice(title=rotulo, value=valor))
     try:
         resposta = questionary.select(
             titulo,
