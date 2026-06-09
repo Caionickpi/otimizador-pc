@@ -13,6 +13,13 @@ Padrão de cores (definido em :mod:`config`):
 from __future__ import annotations
 
 import os
+import sys
+
+# Profundidade de cor MÁXIMA no menu (prompt_toolkit). Sem isto, o console do
+# Windows costuma cair para 16 cores e a interface fica "lavada". Precisa ser
+# definido ANTES de o prompt_toolkit detectar a saída — por isso fica no topo.
+os.environ.setdefault("PROMPT_TOOLKIT_COLOR_DEPTH", "DEPTH_24_BIT")
+
 from typing import Any, Iterable, Optional, Sequence
 
 import questionary
@@ -34,19 +41,30 @@ from rich.text import Text
 
 import config
 
-# Console único compartilhado por todo o programa.
-console: Console = Console()
+# Console único compartilhado. No Windows, forçamos cor de 24 bits (ANSI/VT) em
+# vez do caminho "legacy" de 16 cores — é o que faz as cores aparecerem vivas
+# em vez de "apagadas". O rich aproxima sozinho onde houver menos cores.
+if sys.platform.startswith("win"):
+    console: Console = Console(color_system="truecolor", legacy_windows=False)
+else:
+    console = Console()
 
-# Estilo do questionary alinhado ao nosso esquema de cores.
+# Tema do menu (questionary/prompt_toolkit). IMPORTANTE: o questionary pinta
+# TODAS as linhas não selecionadas com a classe "text" e a linha atual com
+# "highlighted" — então damos cor às duas para o menu nunca ficar "morto".
+# As categorias (separadores) usam "separator".
 _ESTILO_QUESTIONARY = Style(
     [
-        ("qmark", "fg:#00afaf bold"),
-        ("question", "bold"),
-        ("pointer", "fg:#00afaf bold"),
-        ("highlighted", "fg:#00afaf bold"),
-        ("selected", "fg:#5fafff"),
-        ("answer", "fg:#5fafff bold"),
-        ("instruction", "fg:#808080"),
+        ("qmark", "fg:#58a6ff bold"),                   # símbolo da pergunta
+        ("question", "fg:#ffffff bold"),                # texto da pergunta
+        ("answer", "fg:#39d0d8 bold"),                  # resposta escolhida
+        ("pointer", "fg:#58a6ff bold"),                 # seta ▶ da linha atual
+        ("highlighted", "fg:#ffffff bg:#1f6feb bold"),  # barra de seleção (viva)
+        ("selected", "fg:#3fb950 bold"),                # itens marcados (checkbox)
+        ("separator", "fg:#d29922 bold"),               # rótulos de categoria
+        ("text", "fg:#c9d1d9"),                         # TODAS as demais linhas
+        ("instruction", "fg:#6e7681 italic"),           # dica "(use as setas...)"
+        ("disabled", "fg:#6e7681 italic"),
     ]
 )
 
@@ -128,25 +146,37 @@ def limpar_tela() -> None:
 def tela_boas_vindas() -> None:
     """Exibe a tela inicial com o nome do programa e o aviso de segurança."""
     titulo = Text(justify="center")
-    titulo.append("⚙  ", style="bold cyan")
+    titulo.append("⚙  ", style=config.COR_ACENTO)
     titulo.append(config.NOME_APP, style=config.COR_DESTAQUE)
-    titulo.append(f"  v{config.VERSAO_APP}", style="dim")
+    titulo.append(f"   v{config.VERSAO_APP}", style=config.COR_DIM)
 
     corpo = Text(justify="center")
     corpo.append("\n")
     corpo.append(f"{config.DESCRICAO_APP}\n\n", style=config.COR_INFO)
-    corpo.append("🛡  Sempre cria backup e pede confirmação antes de mexer.\n", style=config.COR_OK)
-    corpo.append("Nada é alterado sem a sua aprovação.\n\n", style=config.COR_OK)
-    corpo.append("Foco total em segurança e reversibilidade.", style="dim italic")
+    corpo.append("🛡  ", style=config.COR_OK)
+    corpo.append("Sempre faz backup e pede confirmação — ", style=config.COR_OK)
+    corpo.append("nada muda sem você aprovar.\n", style=config.COR_DESTAQUE)
+    corpo.append("Tudo é reversível em ", style=config.COR_NEUTRA)
+    corpo.append("“Desfazer última alteração”.", style=config.COR_ACENTO)
 
     console.print(
         Panel(
             Align.center(Text.assemble(titulo, "\n", corpo)),
-            border_style=config.COR_INFO,
-            box=box.DOUBLE,
+            border_style=config.COR_ACENTO,
+            box=box.HEAVY,
             padding=(1, 6),
         )
     )
+
+    # Dica de emojis coloridos: o console clássico (conhost) os mostra em P&B; o
+    # Windows Terminal mostra coloridos. Só sugerimos quando faz sentido.
+    if sys.platform.startswith("win") and not os.environ.get("WT_SESSION"):
+        console.print(
+            Text(
+                "  dica: abra no Windows Terminal para ver os emojis coloridos.",
+                style=f"italic {config.COR_DIM}",
+            )
+        )
 
 
 def cabecalho(titulo: str, subtitulo: Optional[str] = None) -> None:
@@ -154,14 +184,23 @@ def cabecalho(titulo: str, subtitulo: Optional[str] = None) -> None:
     texto = _render(titulo, config.COR_DESTAQUE)
     if subtitulo:
         texto.append("\n")
-        texto.append_text(_render(subtitulo, "dim"))
+        texto.append_text(_render(subtitulo, config.COR_DIM))
     console.print(
-        Panel(texto, border_style=config.COR_INFO, box=box.HEAVY, padding=(0, 2), expand=True)
+        Panel(texto, border_style=config.COR_ACENTO, box=box.HEAVY, padding=(0, 2), expand=True)
     )
 
 
 def _painel(mensagem: str, titulo: str, cor: str) -> None:
-    console.print(Panel(_render(mensagem, cor), title=titulo, border_style=cor, title_align="left"))
+    console.print(
+        Panel(
+            _render(mensagem, cor),
+            title=titulo,
+            border_style=cor,
+            title_align="left",
+            box=box.ROUNDED,
+            padding=(0, 1),
+        )
+    )
 
 
 def sucesso(mensagem: str) -> None:
@@ -301,6 +340,7 @@ def menu_selecao(titulo: str, opcoes: Sequence[Any]) -> Optional[object]:
             choices=escolhas,
             style=_ESTILO_QUESTIONARY,
             qmark="»",
+            pointer="▶",
             instruction="(use as setas, Enter para confirmar)",
         ).ask()
     except (KeyboardInterrupt, EOFError):
@@ -322,6 +362,7 @@ def menu_multiplo(titulo: str, opcoes: Sequence[tuple[str, object]]) -> list[obj
             choices=escolhas,
             style=_ESTILO_QUESTIONARY,
             qmark="»",
+            pointer="▶",
             instruction="(Espaço marca/desmarca, Enter confirma)",
         ).ask()
     except (KeyboardInterrupt, EOFError):

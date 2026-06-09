@@ -178,9 +178,9 @@ def _acao_ver_logs(estado: config.EstadoApp) -> None:
 def _rotulo_admin(estado: config.EstadoApp) -> str:
     """Texto curto indicando o nível de privilégio."""
     return (
-        "[green]✔ administrador[/green]"
+        f"[{config.COR_OK}]✔ administrador[/]"
         if estado.eh_admin
-        else "[yellow]● usuário comum[/yellow]"
+        else f"[{config.COR_AVISO}]● usuário comum[/]"
     )
 
 
@@ -191,10 +191,15 @@ def _menu_principal(estado: config.EstadoApp) -> None:
     """Laço do menu principal."""
     while True:
         interface.limpar_tela()
-        sim = "[green]● LIGADO[/green]" if estado.simulacao else "[dim]○ desligado[/dim]"
+        sim = (
+            f"[{config.COR_OK}]● LIGADO[/]"
+            if estado.simulacao
+            else f"[{config.COR_DIM}]○ desligado[/]"
+        )
         interface.cabecalho(
-            f"⚙  {config.NOME_APP}  [dim]v{config.VERSAO_APP}[/dim]",
-            f"Privilégio: {_rotulo_admin(estado)}    │    🧪 Simulação: {sim}",
+            f"⚙  {config.NOME_APP}  [{config.COR_DIM}]v{config.VERSAO_APP}[/]",
+            f"Privilégio: {_rotulo_admin(estado)}    [{config.COR_DIM}]│[/]    "
+            f"🧪 Simulação: {sim}",
         )
 
         opcoes: list[Any] = [

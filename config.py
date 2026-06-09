@@ -87,18 +87,25 @@ def garantir_pastas() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Esquema de cores (estilos do rich)
+# Esquema de cores (estilos do rich) — paleta escura, viva e profissional.
+#   azul    = informação / destaque principal
+#   ciano   = realces e ícones
 #   verde   = seguro / concluído
-#   amarelo = atenção
+#   âmbar   = atenção / categorias
 #   vermelho= cuidado / crítico
+# Usamos HEX (24 bits) para cores vivas; o rich aproxima sozinho em terminais
+# com menos cores. A interface força cor de 24 bits no Windows (ver interface.py).
 # ---------------------------------------------------------------------------
-COR_OK: str = "green"
-COR_AVISO: str = "yellow"
-COR_ERRO: str = "red"
-COR_INFO: str = "cyan"
-COR_TITULO: str = "bold cyan"
-COR_DESTAQUE: str = "bold white"
-COR_NEUTRA: str = "white"
+COR_OK: str = "#3fb950"          # verde
+COR_AVISO: str = "#d29922"       # âmbar
+COR_ERRO: str = "#f85149"        # vermelho
+COR_INFO: str = "#58a6ff"        # azul (destaque principal)
+COR_ACENTO: str = "#39d0d8"      # ciano (realces, bordas)
+COR_TITULO: str = "bold #58a6ff"
+COR_DESTAQUE: str = "bold #ffffff"
+COR_NEUTRA: str = "#c9d1d9"      # texto comum (claro, alto contraste)
+COR_SECAO: str = "bold #d29922"  # rótulos de categoria nos menus
+COR_DIM: str = "#6e7681"         # texto apagado / dicas
 
 # Mapeia o nível de risco textual para uma cor consistente.
 COR_POR_RISCO: dict[str, str] = {
