@@ -110,12 +110,18 @@ def _aplicar_pacote(
     riscos: str,
     valores: list[tuple[str, str, str, int, Any]],
     exige_reinicio: bool = False,
+    modulo: str = "avancado",
+    cabecalho_titulo: "str | None" = None,
 ) -> None:
     """Fluxo seguro padrão para um conjunto de valores de registro.
 
-    valores: lista de ``(raiz, subchave, nome, tipo, dado)``.
+    valores: lista de ``(raiz, subchave, nome, tipo, dado)``. Reutilizável por
+    outros módulos (ex.: otimização por jogo) via ``modulo``/``cabecalho_titulo``.
     """
-    interface.cabecalho(f"Avançado · {titulo}", "Leia a descrição e os riscos antes de aplicar.")
+    interface.cabecalho(
+        cabecalho_titulo or f"Avançado · {titulo}",
+        "Leia a descrição e os riscos antes de aplicar.",
+    )
     interface.info(descricao)
     interface.aviso(
         f"⚠ Riscos:\n{riscos}\n\n"
@@ -138,7 +144,7 @@ def _aplicar_pacote(
 
     # Backup das chaves-pai (.reg) por segurança extra.
     for raiz, sub in {(r, s) for r, s, _n, _t, _d in valores}:
-        seguranca.backup_chave_registro(f"{raiz}\\{sub}", "avancado")
+        seguranca.backup_chave_registro(f"{raiz}\\{sub}", modulo)
 
     # Snapshot preciso de cada valor (para o desfazer).
     snapshots = [_snapshot(r, s, n) for r, s, n, _t, _d in valores]
@@ -158,17 +164,57 @@ def _aplicar_pacote(
         msg = "Nenhum ajuste pôde ser aplicado."
         if negado:
             msg += " Execute o programa como administrador e tente de novo."
-        seguranca.registrar_acao("avancado", f"Avançado: {titulo}", False, "0 aplicados")
+        seguranca.registrar_acao(modulo, f"Avançado: {titulo}", False, "0 aplicados")
         interface.erro(msg)
         return
 
     seguranca.registrar_desfazer(
-        "avancado", f"Reverter ajuste avançado: {titulo}", "reg_valores", {"snapshots": snapshots}
+        modulo, f"Reverter ajuste: {titulo}", "reg_valores", {"snapshots": snapshots}
     )
-    seguranca.registrar_acao("avancado", f"Avançado: {titulo}", True, f"{aplicados} valor(es)")
+    seguranca.registrar_acao(modulo, f"Avançado: {titulo}", True, f"{aplicados} valor(es)")
     extra = "\n🔁 Reinicie o computador para o efeito completo." if exige_reinicio else ""
     aviso_admin = "\n(Alguns valores não puderam ser gravados — exigem administrador.)" if negado else ""
     interface.sucesso(f"'{titulo}' aplicado ({aplicados} valor(es)).{extra}{aviso_admin}")
+
+
+# ---------------------------------------------------------------------------
+# Construtores de valores reutilizáveis (também usados na otimização por jogo)
+# ---------------------------------------------------------------------------
+def valores_pacote_jogos() -> list[tuple[str, str, str, int, Any]]:
+    """Pacote GLOBAL de jogo: Modo Jogo, Game DVR off, MMCSS, HAGS e prioridade.
+
+    Reutilizado pela aba de otimização por jogo para montar o perfil completo.
+    """
+    base = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile"
+    return [
+        ("HKCU", r"Software\Microsoft\GameBar", "AllowAutoGameMode", winreg.REG_DWORD, 1),
+        ("HKCU", r"Software\Microsoft\GameBar", "AutoGameModeEnabled", winreg.REG_DWORD, 1),
+        ("HKCU", r"System\GameConfigStore", "GameDVR_Enabled", winreg.REG_DWORD, 0),
+        ("HKLM", r"SOFTWARE\Policies\Microsoft\Windows\GameDVR", "AllowGameDVR", winreg.REG_DWORD, 0),
+        ("HKLM", base, "SystemResponsiveness", winreg.REG_DWORD, 10),
+        ("HKLM", base + r"\Tasks\Games", "GPU Priority", winreg.REG_DWORD, 8),
+        ("HKLM", base + r"\Tasks\Games", "Priority", winreg.REG_DWORD, 6),
+        ("HKLM", base + r"\Tasks\Games", "Scheduling Category", winreg.REG_SZ, "High"),
+        ("HKLM", base + r"\Tasks\Games", "SFIO Priority", winreg.REG_SZ, "High"),
+        ("HKLM", r"SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode", winreg.REG_DWORD, 2),
+        ("HKLM", r"SYSTEM\CurrentControlSet\Control\PriorityControl",
+         "Win32PrioritySeparation", winreg.REG_DWORD, 38),
+    ]
+
+
+def valores_nagle() -> list[tuple[str, str, str, int, Any]]:
+    """Tweaks de latência (desativar Nagle) nas interfaces de rede ativas."""
+    from modulos.tweaks import rede
+
+    saida: list[tuple[str, str, str, int, Any]] = []
+    for interface_rede in rede._interfaces_ativas():
+        guid = interface_rede.get("guid")
+        if not guid:
+            continue
+        sub = f"{_CAMINHO_INTERFACES}\\{guid}"
+        saida.append(("HKLM", sub, "TcpAckFrequency", winreg.REG_DWORD, 1))
+        saida.append(("HKLM", sub, "TCPNoDelay", winreg.REG_DWORD, 1))
+    return saida
 
 
 # ---------------------------------------------------------------------------

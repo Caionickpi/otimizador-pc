@@ -344,6 +344,17 @@ def confirmar(pergunta: str, padrao: bool = False) -> bool:
     return bool(resposta)
 
 
+def pedir_texto(pergunta: str, padrao: str = "") -> str:
+    """Pede uma entrada de texto livre. Retorna string vazia se cancelado."""
+    try:
+        resposta = questionary.text(
+            pergunta, default=padrao, style=_ESTILO_QUESTIONARY, qmark="✏"
+        ).ask()
+    except (KeyboardInterrupt, EOFError):
+        return ""
+    return (resposta or "").strip()
+
+
 def pausar(mensagem: str = "Pressione Enter para continuar...") -> None:
     """Pausa a execução até o usuário pressionar Enter."""
     try:
