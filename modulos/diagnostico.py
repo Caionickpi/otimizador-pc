@@ -79,10 +79,30 @@ def _coletar_sistema(c: Optional[Any]) -> dict[str, Any]:
     return dados
 
 
+def _nome_cpu_rapido() -> str:
+    """Nome do processador via registro do Windows (instantâneo).
+
+    Evita o ``py-cpuinfo`` (que é lento, pois inicia um subprocesso) no caminho
+    principal do diagnóstico — peça-chave para uma detecção rápida.
+    """
+    if not sys.platform.startswith("win"):
+        return ""
+    try:
+        import winreg
+
+        with winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE, r"HARDWARE\DESCRIPTION\System\CentralProcessor\0"
+        ) as chave:
+            nome, _ = winreg.QueryValueEx(chave, "ProcessorNameString")
+            return str(nome).strip()
+    except Exception:  # noqa: BLE001
+        return ""
+
+
 def _coletar_cpu(c: Optional[Any]) -> dict[str, Any]:
-    """Coleta dados do processador."""
+    """Coleta dados do processador (caminho rápido; ``cpuinfo`` só como reserva)."""
     dados: dict[str, Any] = {
-        "modelo": platform.processor() or "-",
+        "modelo": _nome_cpu_rapido() or platform.processor() or "-",
         "nucleos_fisicos": psutil.cpu_count(logical=False) or 0,
         "nucleos_logicos": psutil.cpu_count(logical=True) or 0,
         "freq_base_mhz": 0.0,
@@ -90,8 +110,8 @@ def _coletar_cpu(c: Optional[Any]) -> dict[str, Any]:
         "uso_percent": 0.0,
     }
     try:
-        # Amostra rápida de uso (intervalo curto para não travar a TUI).
-        dados["uso_percent"] = psutil.cpu_percent(interval=0.5)
+        # Amostra curta de uso (rápida, não trava a TUI).
+        dados["uso_percent"] = psutil.cpu_percent(interval=0.1)
     except Exception:  # noqa: BLE001
         pass
     try:
@@ -101,16 +121,17 @@ def _coletar_cpu(c: Optional[Any]) -> dict[str, Any]:
             dados["freq_base_mhz"] = round(freq.max or freq.current, 0)
     except Exception:  # noqa: BLE001
         pass
-    if cpuinfo is not None:
+    # Reservas (só se ainda não temos o modelo): WMI é rápido; cpuinfo é lento.
+    if dados["modelo"] in ("", "-") and c is not None:
+        try:
+            dados["modelo"] = c.Win32_Processor()[0].Name.strip()
+        except Exception:  # noqa: BLE001
+            pass
+    if dados["modelo"] in ("", "-") and cpuinfo is not None:
         try:
             info = cpuinfo.get_cpu_info()
             if info.get("brand_raw"):
                 dados["modelo"] = info["brand_raw"]
-        except Exception:  # noqa: BLE001
-            pass
-    if c is not None and dados["modelo"] in ("", "-"):
-        try:
-            dados["modelo"] = c.Win32_Processor()[0].Name.strip()
         except Exception:  # noqa: BLE001
             pass
     return dados

@@ -5,7 +5,7 @@
 ### Diagnóstico e ajustes **seguros** para Windows 10 e 11 — direto do terminal, em português 🇧🇷
 
 [![Build do .exe (Windows)](https://github.com/Caionickpi/otimizador-pc/actions/workflows/build.yml/badge.svg)](https://github.com/Caionickpi/otimizador-pc/actions/workflows/build.yml)
-![Versão](https://img.shields.io/badge/vers%C3%A3o-1.2.0-blue)
+![Versão](https://img.shields.io/badge/vers%C3%A3o-1.3.0-blue)
 ![Plataforma](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![Interface](https://img.shields.io/badge/TUI-rich%20%2B%20questionary-ff69b4)
@@ -27,6 +27,7 @@ acontece sem você aprovar.
 
 - [✨ Recursos](#-recursos)
 - [🔥 Aba Avançados (jogos e desempenho)](#-aba-avançados-jogos-e-desempenho)
+- [🎯 Otimização por jogo](#-otimização-por-jogo)
 - [🛡️ O que o programa nunca faz](#️-o-que-o-programa-nunca-faz)
 - [🖼️ Prévia da interface](#️-prévia-da-interface)
 - [📥 Baixar o executável (.exe)](#-baixar-o-executável-exe-pronto)
@@ -60,6 +61,7 @@ acontece sem você aprovar.
   | ✨ | **Efeitos visuais** | Prioriza desempenho desligando animações pesadas |
   | 💽 | **Disco** | Desfragmenta **só HDD**; faz **TRIM** em SSD |
   | 🔥 | **Avançado** | Otimizações "pesadas" para **jogos e desempenho máximo** (risco médio/alto) — veja abaixo |
+  | 🎯 | **Por jogo** | **Detecta os jogos instalados** e otimiza o PC para o jogo escolhido, adaptado ao hardware |
 
 - **🔒 Mecanismos de segurança**: ponto de restauração do sistema, backup de
   registro (`.reg`), **modo simulação (dry-run)**, confirmação dupla,
@@ -93,6 +95,30 @@ acontece sem você aprovar.
 
 > 💡 Os ajustes de energia (Plano Máximo, *Power Throttling*) **não** são
 > indicados para notebook na bateria, pois aumentam o consumo e o aquecimento.
+
+## 🎯 Otimização por jogo
+
+Uma **experiência única para cada PC**: o programa detecta o hardware
+**rapidamente** (≈ instantâneo), monta um **perfil da sua máquina** e usa isso
+para adaptar os ajustes. Depois, **detecta os jogos instalados** (Steam e Epic)
+e otimiza o PC para o jogo que você escolher.
+
+**Como funciona:**
+
+1. Detecta os componentes (CPU/GPU/RAM/disco, notebook × desktop) — leitura
+   rápida, via registro/WMI (sem travar).
+2. Lista os **jogos instalados** que encontrar (ou você informa o `.exe`).
+3. Você **escolhe um jogo** e o programa aplica um perfil sob medida:
+   - **Para o jogo** (sem admin): força a **GPU dedicada** (ótimo em notebook
+     híbrido) e **desativa as otimizações de tela cheia** do executável.
+   - **No sistema**: Modo Jogo, Game DVR desligado, prioridade para jogos
+     (MMCSS) e agendamento de GPU por hardware (HAGS).
+   - **Jogo competitivo** (CS2, Valorant, LoL…): inclui **redução de latência
+     de rede** (Nagle).
+
+> ✅ Como tudo no programa, **é reversível**: cada otimização por jogo registra
+> um "desfazer" preciso (restaura/remap o que mudou) e respeita o **Modo
+> simulação**.
 
 ## 🛡️ O que o programa **nunca** faz
 
@@ -136,10 +162,12 @@ acontece sem você aprovar.
     9)  💽  Otimização de disco
     ─── Avançado · risco ───
    10)  🔥  Otimizações avançadas (jogos e desempenho)
+    ─── Por jogo ───
+   11)  🎯  Otimizar para um jogo (detecta no PC)
     ─── Ferramentas ───
-   11)  🧪  Modo simulação (ligar)
-   12)  ↩  Desfazer última alteração
-   13)  📜  Ver logs
+   12)  🧪  Modo simulação (ligar)
+   13)  ↩  Desfazer última alteração
+   14)  📜  Ver logs
     0)  🚪  Sair
 ```
 
@@ -172,7 +200,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-> 💡 **Dica:** ative o **Modo simulação** (opção 11) para ver exatamente o que
+> 💡 **Dica:** ative o **Modo simulação** (opção 12) para ver exatamente o que
 > cada ajuste faria, **sem alterar nada**.
 
 ## 🔨 Gerar o executável você mesmo
@@ -202,7 +230,9 @@ otimizador-pc/
 ├── build.bat                   # Gera o .exe no Windows (duplo-clique)
 ├── .github/workflows/build.yml # CI: compila o .exe no Windows do GitHub
 ├── modulos/
-│   ├── diagnostico.py          # Detecção de hardware/software (leitura)
+│   ├── diagnostico.py          # Detecção de hardware/software (leitura, rápida)
+│   ├── hardware.py             # Perfil de otimização por máquina (escalabilidade)
+│   ├── jogos.py                # Detecção de jogos instalados (Steam/Epic)
 │   ├── recomendacoes.py        # Análise do perfil + sugestões
 │   ├── seguranca.py            # Restauração, backups, logging, desfazer
 │   ├── interface.py            # Componentes da TUI (rich + questionary)
@@ -215,7 +245,8 @@ otimizador-pc/
 │       ├── rede.py
 │       ├── visual.py
 │       ├── disco.py
-│       └── avancado.py         # 🔥 Otimizações avançadas (jogos/desempenho)
+│       ├── avancado.py         # 🔥 Otimizações avançadas (jogos/desempenho)
+│       └── otimizar_jogo.py    # 🎯 Otimização por jogo (detecta + adapta)
 ├── dados/
 │   └── servicos_seguros.json   # Whitelist de serviços seguros
 ├── logs/                       # Logs (gerados em tempo de execução)
@@ -224,7 +255,7 @@ otimizador-pc/
 
 ## ↩️ Como desfazer alterações
 
-- **Desfazer última alteração** (opção 12) reverte a última mudança registrada
+- **Desfazer última alteração** (opção 13) reverte a última mudança registrada
   (serviço, DNS, plano de energia, inicialização ou efeitos visuais).
 - Os **backups de registro** ficam em `backups\*.reg` — aplique-os manualmente
   com duplo-clique ou `reg import "arquivo.reg"`.
@@ -234,7 +265,7 @@ otimizador-pc/
 ## 🧾 Logs
 
 Cada execução grava em `logs\otimizador_AAAA-MM-DD.log`, com data, hora, ação e
-resultado (sucesso/erro). Veja-os pelo menu (opção 13) ou abrindo o arquivo.
+resultado (sucesso/erro). Veja-os pelo menu (opção 14) ou abrindo o arquivo.
 
 ## ❓ Perguntas frequentes
 
