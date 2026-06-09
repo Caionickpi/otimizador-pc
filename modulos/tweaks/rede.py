@@ -15,7 +15,7 @@ que existia antes.
 from __future__ import annotations
 
 import sys
-from typing import Any, Optional
+from typing import Any
 
 import config
 from modulos import interface, seguranca

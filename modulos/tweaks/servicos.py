@@ -33,6 +33,26 @@ _MAPA_SC = {
     "system": "system",
 }
 
+# Tradução para exibição amigável em pt-BR (não afeta a lógica/comandos).
+_PT_ESTADO = {"running": "Em execução", "stopped": "Parado", "paused": "Pausado"}
+_PT_INICIO = {
+    "auto": "Automático",
+    "automatic": "Automático",
+    "manual": "Manual",
+    "demand": "Manual",
+    "disabled": "Desativado",
+    "boot": "Boot",
+    "system": "Sistema",
+}
+
+
+def _pt_estado(valor: str) -> str:
+    return _PT_ESTADO.get(str(valor).lower(), valor)
+
+
+def _pt_inicio(valor: str) -> str:
+    return _PT_INICIO.get(str(valor).lower(), valor)
+
 
 def _carregar_whitelist() -> list[dict[str, Any]]:
     """Carrega a lista curada de serviços seguros do arquivo JSON."""
@@ -54,23 +74,38 @@ def _conectar() -> Optional[Any]:
         return None
 
 
-def _consultar_estado(c: Optional[Any], nome: str) -> dict[str, Any]:
-    """Consulta o estado atual de um serviço (existe, modo, estado)."""
+def _todos_estados(c: Optional[Any]) -> Optional[dict[str, dict[str, Any]]]:
+    """Lê o estado de TODOS os serviços de uma vez (1 só consulta ao WMI).
+
+    Consultar serviço por serviço deixava a tela lenta. Aqui buscamos tudo de
+    uma vez e indexamos por nome (minúsculo).
+
+    Returns:
+        ``{nome_minusculo: {existe, start_mode, state}}`` ou ``None`` se o WMI
+        não estiver disponível (aí o chamador usa o ``sc`` como reserva).
+    """
+    if c is None:
+        return None
+    mapa: dict[str, dict[str, Any]] = {}
+    try:
+        for svc in c.Win32_Service():
+            nome = getattr(svc, "Name", None)
+            if not nome:
+                continue
+            mapa[str(nome).lower()] = {
+                "existe": True,
+                "start_mode": (getattr(svc, "StartMode", "-") or "-"),
+                "state": (getattr(svc, "State", "-") or "-"),
+            }
+    except Exception as exc:  # noqa: BLE001
+        seguranca.registrar(f"WMI Win32_Service() falhou: {exc}", logging.WARNING)
+        return None
+    return mapa
+
+
+def _estado_por_sc(nome: str) -> dict[str, Any]:
+    """Reserva (sem WMI): consulta o estado de um serviço via 'sc'."""
     info: dict[str, Any] = {"existe": False, "start_mode": "-", "state": "-"}
-
-    if c is not None:
-        try:
-            servicos = c.Win32_Service(Name=nome)
-            if servicos:
-                svc = servicos[0]
-                info["existe"] = True
-                info["start_mode"] = (getattr(svc, "StartMode", "-") or "-")
-                info["state"] = (getattr(svc, "State", "-") or "-")
-                return info
-        except Exception as exc:  # noqa: BLE001
-            seguranca.registrar(f"WMI Win32_Service({nome}) falhou: {exc}", logging.WARNING)
-
-    # Reserva: 'sc qc' para o tipo de inicialização.
     codigo, saida, _err = seguranca.executar_comando(["sc", "qc", nome], timeout=20)
     if codigo == 0:
         info["existe"] = True
@@ -82,7 +117,22 @@ def _consultar_estado(c: Optional[Any], nome: str) -> dict[str, Any]:
                     info["start_mode"] = "Manual"
                 elif "AUTO" in linha:
                     info["start_mode"] = "Auto"
+    cod_q, saida_q, _e = seguranca.executar_comando(["sc", "query", nome], timeout=20)
+    if cod_q == 0:
+        for linha in saida_q.splitlines():
+            if "STATE" in linha:
+                if "RUNNING" in linha:
+                    info["state"] = "Running"
+                elif "STOPPED" in linha:
+                    info["state"] = "Stopped"
     return info
+
+
+def _estado_servico(nome: str, mapa: Optional[dict[str, dict[str, Any]]]) -> dict[str, Any]:
+    """Devolve o estado de um serviço usando o mapa do WMI ou o 'sc' como reserva."""
+    if mapa is not None:
+        return dict(mapa.get(nome.lower(), {"existe": False, "start_mode": "-", "state": "-"}))
+    return _estado_por_sc(nome)
 
 
 def _aplicar_tipo(nome: str, tipo_sc: str) -> tuple[bool, str]:
@@ -124,14 +174,16 @@ def menu(estado: config.EstadoApp) -> None:
             "Apenas serviços seguros e conhecidos. Sempre reversível.",
         )
 
-        # Monta a tabela com o estado atual de cada serviço da whitelist.
+        # Lê o estado de todos os serviços de uma vez (rápido) e monta a tabela
+        # apenas com os serviços da whitelist que existem nesta máquina.
+        mapa_estados = _todos_estados(c)
         linhas: list[dict[str, Any]] = []
         tabela = interface.nova_tabela(
             "Serviços (lista curada)",
             ["#", "Serviço", "Risco", "Estado atual", "Início"],
         )
-        for indice, svc in enumerate(whitelist, start=1):
-            est = _consultar_estado(c, svc["nome"])
+        for svc in whitelist:
+            est = _estado_servico(svc["nome"], mapa_estados)
             if not est["existe"]:
                 continue
             risco = svc.get("risco", "baixo")
@@ -141,8 +193,8 @@ def menu(estado: config.EstadoApp) -> None:
                 str(len(linhas)),
                 svc.get("nome_exibicao", svc["nome"]),
                 f"[{cor_risco}]{risco}[/{cor_risco}]",
-                est["state"],
-                est["start_mode"],
+                _pt_estado(est["state"]),
+                _pt_inicio(est["start_mode"]),
             )
         interface.imprimir_tabela(tabela)
         interface.texto(
@@ -184,7 +236,10 @@ def _fluxo_detalhes(linhas: list[dict[str, Any]]) -> None:
             ("Risco de desativar", svc.get("risco", "-")),
             ("Recomendado desativar?", "Sim" if svc.get("recomendado_desativar") else "Avaliar"),
             ("Observação", svc.get("observacao", "-")),
-            ("Estado atual", f"{svc['estado']['state']} / início {svc['estado']['start_mode']}"),
+            (
+                "Estado atual",
+                f"{_pt_estado(svc['estado']['state'])} / início {_pt_inicio(svc['estado']['start_mode'])}",
+            ),
         ],
     )
     interface.pausar()
@@ -218,7 +273,7 @@ def _fluxo_alterar(linhas: list[dict[str, Any]], estado: config.EstadoApp) -> No
 
     escolhidos = [linhas[i] for i in selecionados]
     resumo = "\n".join(
-        f"  • {svc.get('nome_exibicao', svc['nome'])} (atual: {svc['estado']['start_mode']})"
+        f"  • {svc.get('nome_exibicao', svc['nome'])} (atual: {_pt_inicio(svc['estado']['start_mode'])})"
         for svc in escolhidos
     )
     rotulo_acao = {"demand": "Manual", "disabled": "Desativado", "auto": "Automático"}[tipo_sc]
@@ -257,8 +312,8 @@ def _alterar_um(svc: dict[str, Any], tipo_sc: str) -> None:
     seguranca.registrar_acao("servicos", f"'{nome}' -> {tipo_sc}", True, f"original={start_original}")
     seguranca.registrar_desfazer(
         "servicos",
-        f"Restaurar serviço {nome_exibicao} para '{start_original}'",
+        f"Restaurar serviço {nome_exibicao} para '{_pt_inicio(start_original)}'",
         "servico",
         {"nome": nome, "start_original": _MAPA_SC.get(start_original.lower(), "demand")},
     )
-    interface.sucesso(f"{nome_exibicao}: início alterado para '{tipo_sc}'.")
+    interface.sucesso(f"{nome_exibicao}: início alterado para '{_pt_inicio(tipo_sc)}'.")

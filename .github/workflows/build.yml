@@ -1,0 +1,74 @@
+name: Compilar OtimizadorPC (Windows .exe)
+
+# Compila o executavel do Otimizador PC numa maquina Windows real do GitHub.
+# O .exe gerado fica disponivel para download como "artifact" ao final da
+# execucao (aba Actions -> abra a run -> secao Artifacts).
+#
+# Dispara:
+#   * em todo push para main ou para os branches claude/** ;
+#   * manualmente pelo botao "Run workflow" (workflow_dispatch) ;
+#   * em tags v* -> alem do artifact, publica uma Release com o .exe anexado.
+
+on:
+  push:
+    branches:
+      - main
+      - "claude/**"
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build (.exe) no Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Baixar o codigo
+        uses: actions/checkout@v4
+
+      - name: Instalar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Compilar com o PyInstaller
+        run: pyinstaller --noconfirm --clean OtimizadorPC.spec
+
+      - name: Conferir se o .exe foi gerado
+        shell: pwsh
+        run: |
+          $exe = "dist/OtimizadorPC.exe"
+          if (-not (Test-Path $exe)) {
+            Write-Error "O executavel nao foi gerado em $exe"
+            exit 1
+          }
+          $mb = [math]::Round((Get-Item $exe).Length / 1MB, 1)
+          Write-Host "OK: $exe gerado com sucesso ($mb MB)."
+
+      - name: Publicar o .exe como artifact (download)
+        uses: actions/upload-artifact@v4
+        with:
+          name: OtimizadorPC-windows
+          path: dist/OtimizadorPC.exe
+          if-no-files-found: error
+
+      - name: Publicar Release com o .exe (somente em tags v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes=$'📥 Baixe o **OtimizadorPC.exe** na seção *Assets* abaixo — não precisa de Python instalado.\n\n• Duplo-clique para abrir (diagnóstico e recomendações funcionam sem admin).\n• Para aplicar ajustes: clique com o botão direito → **Executar como administrador**.\n\nExecutável para Windows 10/11, compilado automaticamente pelo GitHub Actions a partir do código desta tag.'
+          gh release create "${GITHUB_REF_NAME}" "dist/OtimizadorPC.exe" \
+            --title "Otimizador PC ${GITHUB_REF_NAME}" \
+            --notes "$notes"

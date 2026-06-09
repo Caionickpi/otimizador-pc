@@ -14,7 +14,7 @@ from __future__ import annotations
 import logging
 import sys
 import traceback
-from typing import Callable
+from typing import Any, Callable
 
 import config
 from modulos import diagnostico, elevacao, interface, recomendacoes, seguranca
@@ -162,7 +162,11 @@ def _acao_ver_logs(estado: config.EstadoApp) -> None:
 
 def _rotulo_admin(estado: config.EstadoApp) -> str:
     """Texto curto indicando o nível de privilégio."""
-    return "[green]administrador[/green]" if estado.eh_admin else "[yellow]usuário comum[/yellow]"
+    return (
+        "[green]✔ administrador[/green]"
+        if estado.eh_admin
+        else "[yellow]● usuário comum[/yellow]"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -172,26 +176,28 @@ def _menu_principal(estado: config.EstadoApp) -> None:
     """Laço do menu principal."""
     while True:
         interface.limpar_tela()
-        sim = "[green]LIGADO[/green]" if estado.simulacao else "desligado"
+        sim = "[green]● LIGADO[/green]" if estado.simulacao else "[dim]○ desligado[/dim]"
         interface.cabecalho(
-            f"{config.NOME_APP}  v{config.VERSAO_APP}",
-            f"Privilégio: {_rotulo_admin(estado)}   |   Modo simulação: {sim}",
+            f"⚙  {config.NOME_APP}  [dim]v{config.VERSAO_APP}[/dim]",
+            f"Privilégio: {_rotulo_admin(estado)}    │    🧪 Simulação: {sim}",
         )
 
-        opcoes: list[tuple[str, str]] = [
-            ("1) Diagnóstico do computador", "diagnostico"),
-            ("2) Recomendações personalizadas", "recomendacoes"),
-            ("3) Limpeza de arquivos temporários", "limpeza"),
-            ("4) Gerenciar inicialização", "inicializacao"),
-            ("5) Otimizar serviços", "servicos"),
-            ("6) Plano de energia", "energia"),
-            ("7) Otimização de rede", "rede"),
-            ("8) Efeitos visuais / desempenho", "visual"),
-            ("9) Otimização de disco", "disco"),
-            (f"10) Modo simulação ({'desligar' if estado.simulacao else 'ligar'})", "simulacao"),
-            ("11) Desfazer última alteração", "desfazer"),
-            ("12) Ver logs", "logs"),
-            ("0) Sair", "sair"),
+        opcoes: list[Any] = [
+            ("1)  🔍  Diagnóstico do computador", "diagnostico"),
+            ("2)  💡  Recomendações personalizadas", "recomendacoes"),
+            interface.separador("Ajustes"),
+            ("3)  🧹  Limpeza de arquivos temporários", "limpeza"),
+            ("4)  🚀  Gerenciar inicialização", "inicializacao"),
+            ("5)  🛠  Otimizar serviços", "servicos"),
+            ("6)  🔋  Plano de energia", "energia"),
+            ("7)  🌐  Otimização de rede", "rede"),
+            ("8)  ✨  Efeitos visuais / desempenho", "visual"),
+            ("9)  💽  Otimização de disco", "disco"),
+            interface.separador("Ferramentas"),
+            (f"10) 🧪  Modo simulação ({'desligar' if estado.simulacao else 'ligar'})", "simulacao"),
+            ("11) ↩  Desfazer última alteração", "desfazer"),
+            ("12) 📜  Ver logs", "logs"),
+            ("0)  🚪  Sair", "sair"),
         ]
         escolha = interface.menu_selecao("Escolha uma opção:", opcoes)
 
