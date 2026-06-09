@@ -1,0 +1,141 @@
+{
+  "_comentario": "Lista curada (whitelist) de servicos do Windows considerados seguros de desativar em PCs comuns. NUNCA inclua aqui servicos criticos de inicializacao, rede essencial, audio, seguranca (Defender/Firewall) ou atualizacao. 'risco' indica o impacto de desativar: baixo, medio. O estado original e capturado em tempo de execucao para permitir reverter.",
+  "_versao": 1,
+  "servicos": [
+    {
+      "nome": "DiagTrack",
+      "nome_exibicao": "Experiencias do Usuario Conectado e Telemetria",
+      "descricao": "Coleta e envia dados de diagnostico e uso para a Microsoft. Desativar reduz telemetria, sem afetar o funcionamento do Windows.",
+      "risco": "baixo",
+      "recomendado_desativar": true,
+      "tipo_sugerido": "disabled",
+      "observacao": "Nao e um recurso de seguranca. Seguro de desativar."
+    },
+    {
+      "nome": "dmwappushservice",
+      "nome_exibicao": "Roteamento de Mensagens Push WAP",
+      "descricao": "Servico ligado a coleta de dados de telemetria. Pode ser desativado com seguranca na maioria dos PCs.",
+      "risco": "baixo",
+      "recomendado_desativar": true,
+      "tipo_sugerido": "disabled",
+      "observacao": "Relacionado a telemetria."
+    },
+    {
+      "nome": "RetailDemo",
+      "nome_exibicao": "Servico de Demonstracao de Varejo",
+      "descricao": "Usado apenas em maquinas de demonstracao de lojas. Inutil em uso domestico ou profissional.",
+      "risco": "baixo",
+      "recomendado_desativar": true,
+      "tipo_sugerido": "disabled",
+      "observacao": "Sem impacto para usuarios finais."
+    },
+    {
+      "nome": "Fax",
+      "nome_exibicao": "Fax",
+      "descricao": "Permite enviar e receber fax pelo computador. A maioria dos usuarios nunca usa.",
+      "risco": "baixo",
+      "recomendado_desativar": true,
+      "tipo_sugerido": "disabled",
+      "observacao": "Desative apenas se nao usa fax."
+    },
+    {
+      "nome": "RemoteRegistry",
+      "nome_exibicao": "Registro Remoto",
+      "descricao": "Permite que outros computadores alterem o registro desta maquina pela rede. Desativar AUMENTA a seguranca.",
+      "risco": "baixo",
+      "recomendado_desativar": true,
+      "tipo_sugerido": "disabled",
+      "observacao": "Normalmente ja vem desativado. Desativar e recomendado por seguranca."
+    },
+    {
+      "nome": "MapsBroker",
+      "nome_exibicao": "Gerenciador de Mapas Baixados",
+      "descricao": "Suporte a mapas offline do aplicativo Mapas. Desnecessario se voce nao usa mapas offline.",
+      "risco": "baixo",
+      "recomendado_desativar": true,
+      "tipo_sugerido": "disabled",
+      "observacao": "Desative se nao usa o app Mapas offline."
+    },
+    {
+      "nome": "WerSvc",
+      "nome_exibicao": "Relatorio de Erros do Windows",
+      "descricao": "Envia relatorios de falhas para a Microsoft. Desativar nao afeta a estabilidade do sistema.",
+      "risco": "baixo",
+      "recomendado_desativar": false,
+      "tipo_sugerido": "demand",
+      "observacao": "Manter pode ajudar diagnosticos; desativar reduz envios."
+    },
+    {
+      "nome": "lfsvc",
+      "nome_exibicao": "Servico de Geolocalizacao",
+      "descricao": "Fornece a localizacao do dispositivo para apps. Desative se nao usa recursos baseados em localizacao.",
+      "risco": "baixo",
+      "recomendado_desativar": false,
+      "tipo_sugerido": "demand",
+      "observacao": "Alguns apps de clima/mapas deixam de saber sua localizacao."
+    },
+    {
+      "nome": "XblAuthManager",
+      "nome_exibicao": "Gerenciador de Autenticacao do Xbox Live",
+      "descricao": "Autenticacao para servicos do Xbox Live. Desnecessario se voce nao joga com conta Xbox no PC.",
+      "risco": "baixo",
+      "recomendado_desativar": false,
+      "tipo_sugerido": "demand",
+      "observacao": "Pode afetar jogos integrados ao Xbox/Game Pass."
+    },
+    {
+      "nome": "XblGameSave",
+      "nome_exibicao": "Salvar Jogo do Xbox Live",
+      "descricao": "Sincroniza saves de jogos com o Xbox Live. Desnecessario fora do ecossistema Xbox.",
+      "risco": "baixo",
+      "recomendado_desativar": false,
+      "tipo_sugerido": "demand",
+      "observacao": "Pode afetar sincronizacao de saves de jogos."
+    },
+    {
+      "nome": "XboxNetApiSvc",
+      "nome_exibicao": "Servico de Rede do Xbox Live",
+      "descricao": "Suporte de rede para recursos do Xbox Live. Desnecessario se voce nao usa Xbox no PC.",
+      "risco": "baixo",
+      "recomendado_desativar": false,
+      "tipo_sugerido": "demand",
+      "observacao": "Pode afetar recursos online de jogos Xbox."
+    },
+    {
+      "nome": "TabletInputService",
+      "nome_exibicao": "Teclado de Toque e Painel de Escrita",
+      "descricao": "Suporte a teclado virtual e caneta. Em desktops sem tela de toque costuma ser dispensavel.",
+      "risco": "medio",
+      "recomendado_desativar": false,
+      "tipo_sugerido": "demand",
+      "observacao": "NAO desative em notebooks 2-em-1 ou telas de toque."
+    },
+    {
+      "nome": "SysMain",
+      "nome_exibicao": "SysMain (Superfetch)",
+      "descricao": "Pre-carrega na memoria programas usados com frequencia. Em SSD o ganho e pequeno; em alguns PCs gera uso alto de disco.",
+      "risco": "medio",
+      "recomendado_desativar": false,
+      "tipo_sugerido": "demand",
+      "observacao": "Avalie. Em HDD pode ajudar; em SSD com pouca RAM o efeito varia."
+    },
+    {
+      "nome": "WSearch",
+      "nome_exibicao": "Windows Search (Indexacao)",
+      "descricao": "Indexa arquivos para busca rapida. Desativar reduz uso de disco/CPU, mas a busca no menu Iniciar e no Explorer fica mais lenta.",
+      "risco": "medio",
+      "recomendado_desativar": false,
+      "tipo_sugerido": "demand",
+      "observacao": "So desative se a busca do Windows nao for importante para voce."
+    },
+    {
+      "nome": "Spooler",
+      "nome_exibicao": "Spooler de Impressao",
+      "descricao": "Gerencia filas de impressao. Necessario para imprimir. Alguns desativam por seguranca quando nao ha impressora.",
+      "risco": "medio",
+      "recomendado_desativar": false,
+      "tipo_sugerido": "demand",
+      "observacao": "NAO desative se voce usa impressora (fisica ou PDF)."
+    }
+  ]
+}

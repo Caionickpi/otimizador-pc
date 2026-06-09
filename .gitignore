@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+
+# Ambientes virtuais
+.venv/
+venv/
+env/
+ENV/
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# Dados gerados em tempo de execução (não versionar)
+logs/*.log
+backups/*.reg
+backups/historico_desfazer.json
+
+# Sistema operacional / editores
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/

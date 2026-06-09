@@ -1,0 +1,20 @@
+# Dependências do Otimizador PC
+# Instale com:  pip install -r requirements.txt
+#
+# Observação: este programa é destinado ao Windows 10/11. Os pacotes wmi e
+# pywin32 só instalam/funcionam no Windows.
+
+# Interface de terminal (TUI)
+rich==13.7.1
+questionary==2.0.1
+
+# Detecção de hardware e sistema
+psutil==5.9.8
+py-cpuinfo==9.0.0
+
+# Acesso a WMI e à API do Windows (somente Windows)
+WMI==1.5.1 ; sys_platform == "win32"
+pywin32==306 ; sys_platform == "win32"
+
+# Empacotamento do executável (.exe) — opcional, só para gerar a distribuição
+pyinstaller==6.6.0 ; sys_platform == "win32"
