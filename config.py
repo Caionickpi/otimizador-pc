@@ -20,8 +20,25 @@ from typing import Any
 # Identidade do programa
 # ---------------------------------------------------------------------------
 NOME_APP: str = "Otimizador PC"
-VERSAO_APP: str = "1.3.0"
+VERSAO_APP: str = "1.4.0"
 DESCRICAO_APP: str = "Diagnóstico e ajustes seguros para Windows 10 e 11"
+
+# Nome do executável distribuído (asset do release e alvo da auto-atualização).
+NOME_EXECUTAVEL: str = "OtimizadorPC.exe"
+
+# ---------------------------------------------------------------------------
+# Atualização automática (GitHub Releases)
+# ---------------------------------------------------------------------------
+# O programa consulta a API PÚBLICA de releases do GitHub para saber se há uma
+# versão mais nova e, quando empacotado (.exe), pode baixar e se atualizar
+# sozinho. Isso exige que o repositório/releases sejam PÚBLICOS — em repositório
+# privado a API responde 404 e o programa apenas avisa que não conseguiu checar.
+GITHUB_OWNER: str = "Caionickpi"
+GITHUB_REPO: str = "otimizador-pc"
+URL_API_RELEASE_RECENTE: str = (
+    f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest"
+)
+URL_PAGINA_RELEASES: str = f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}/releases"
 
 # ---------------------------------------------------------------------------
 # Caminhos
