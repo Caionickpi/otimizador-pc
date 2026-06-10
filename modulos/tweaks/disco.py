@@ -73,9 +73,14 @@ def _ativar_trim() -> bool:
 
 
 def _otimizar_unidade(unidade: str, args: list[str]) -> tuple[bool, str]:
-    """Executa o defrag/otimização em uma unidade (operação demorada)."""
+    """Executa o defrag/otimização em uma unidade (operação demorada).
+
+    Timeout de 4h: a desfragmentação completa de um HDD grande e fragmentado
+    pode levar horas — com 30 min, o processo era interrompido no meio e
+    reportado como falha (interromper o defrag é seguro, mas frustra).
+    """
     codigo, _saida, erro = seguranca.executar_comando(
-        ["defrag", unidade, *args], timeout=1800
+        ["defrag", unidade, *args], timeout=14400
     )
     if codigo == 0:
         return True, "Concluído."
@@ -138,7 +143,11 @@ def menu(estado: config.EstadoApp) -> None:
     resumo = "\n".join(
         f"  • {d['unidade']} -> {_acao_para_tipo(d['tipo'])[1]}" for d in escolhidos
     )
-    interface.aviso(f"Serão executadas estas operações:\n{resumo}\n\nIsso pode demorar bastante em HDDs.")
+    interface.aviso(
+        f"Serão executadas estas operações:\n{resumo}\n\n"
+        "Em HDD grande/fragmentado isso pode levar HORAS — deixe o programa "
+        "aberto (dá para usar o PC normalmente enquanto isso)."
+    )
 
     if estado.simulacao:
         interface.info("MODO SIMULAÇÃO: as otimizações acima seriam executadas. Nada foi feito.")

@@ -73,11 +73,15 @@ def desfazer_reg_valores(dados: dict[str, Any]) -> tuple[bool, str]:
     """Reverte um pacote de valores: restaura os antigos e remove os criados.
 
     Usado pelo módulo de segurança ao desfazer um ajuste avançado.
+
+    Caso raro tratado: se um valor JÁ EXISTIA mas não pôde ser serializado no
+    snapshot (ex.: REG_BINARY), NÃO o apagamos — apagar seria pior do que
+    deixar o ajuste aplicado. Ele é contado como "pulado" e informado.
     """
     if winreg is None:
         return False, "Registro do Windows indisponível."
     snaps = dados.get("snapshots", []) or []
-    revertidos = falhas = 0
+    revertidos = falhas = pulados = 0
     for s in snaps:
         try:
             hive = _hive(s.get("raiz", "HKCU"))
@@ -85,6 +89,11 @@ def desfazer_reg_valores(dados: dict[str, Any]) -> tuple[bool, str]:
             if s.get("existia") and s.get("tipo") is not None:
                 with winreg.CreateKeyEx(hive, sub, 0, winreg.KEY_SET_VALUE) as chave:
                     winreg.SetValueEx(chave, nome, 0, int(s["tipo"]), s["dado"])
+            elif s.get("existia"):
+                # Existia, mas o valor original não é restaurável (tipo binário
+                # etc.). Mantemos como está em vez de apagar dado do usuário.
+                pulados += 1
+                continue
             else:
                 # Não existia antes -> remover exatamente o que criamos.
                 try:
@@ -95,10 +104,11 @@ def desfazer_reg_valores(dados: dict[str, Any]) -> tuple[bool, str]:
             revertidos += 1
         except OSError:
             falhas += 1
+    extra = f" ({pulados} mantido(s): valor original não restaurável)" if pulados else ""
     if falhas == 0:
-        return True, f"{revertidos} valor(es) de registro restaurado(s)."
+        return True, f"{revertidos} valor(es) de registro restaurado(s).{extra}"
     if revertidos:
-        return True, f"Revertido parcialmente ({revertidos} OK, {falhas} falha(s) — pode exigir administrador)."
+        return True, f"Revertido parcialmente ({revertidos} OK, {falhas} falha(s) — pode exigir administrador).{extra}"
     return False, "Não foi possível reverter (precisa de administrador?)."
 
 

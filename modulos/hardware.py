@@ -59,7 +59,8 @@ def perfil_otimizacao(perfil: dict[str, Any]) -> dict[str, Any]:
         "ram_gb": ram_gb,
         "ram_baixa": 0 < ram_gb <= 8,
         "tem_ssd": any("SSD" in (d.get("tipo", "") or "").upper() for d in discos),
-        "notebook": bool(energia.get("tem_bateria")),
+        # Chassi primeiro (bateria sozinha confunde desktop+nobreak c/ notebook).
+        "notebook": bool(energia.get("eh_portatil", energia.get("tem_bateria"))),
         "nucleos": int(cpu.get("nucleos_fisicos", 0) or 0),
     }
 

@@ -33,6 +33,19 @@ _EXE_IGNORAR = (
     "touchup", "installscript", "vc_redist", "directx",
 )
 
+# Entradas da Steam que NÃO são jogos (runtimes/ferramentas que todo PC tem) —
+# sem este filtro, "Steamworks Common Redistributables" aparecia como jogo.
+_NAO_JOGOS = (
+    "steamworks common redistributables", "steam linux runtime", "proton",
+    "steamvr", "spacewar",
+)
+
+
+def _eh_jogo_real(nome: str) -> bool:
+    """Filtra entradas de launcher que não são jogos de verdade."""
+    n = (nome or "").strip().lower()
+    return bool(n) and not any(n.startswith(t) or t in n for t in _NAO_JOGOS)
+
 
 # ---------------------------------------------------------------------------
 # Parsers puros (testáveis sem Windows)
@@ -157,7 +170,7 @@ def _jogos_steam() -> list[dict[str, Any]]:
             except OSError:
                 continue
             nome, instal = info.get("name"), info.get("installdir")
-            if not nome or not instal or nome in vistos:
+            if not nome or not instal or nome in vistos or not _eh_jogo_real(nome):
                 continue
             vistos.add(nome)
             jogos.append({
@@ -180,7 +193,7 @@ def _jogos_epic() -> list[dict[str, Any]]:
             d = _parse_epic_item(item.read_text(encoding="utf-8", errors="ignore"))
         except OSError:
             continue
-        if not d:
+        if not d or not _eh_jogo_real(d["nome"]):
             continue
         exe = str(Path(d["local"]) / d["exe_rel"]) if d["exe_rel"] else None
         jogos.append({

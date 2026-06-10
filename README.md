@@ -5,7 +5,7 @@
 ### Diagnóstico e ajustes **seguros** para Windows 10 e 11 — direto do terminal, em português 🇧🇷
 
 [![Build do .exe (Windows)](https://github.com/Caionickpi/otimizador-pc/actions/workflows/build.yml/badge.svg)](https://github.com/Caionickpi/otimizador-pc/actions/workflows/build.yml)
-![Versão](https://img.shields.io/badge/vers%C3%A3o-1.4.1-blue)
+![Versão](https://img.shields.io/badge/vers%C3%A3o-1.4.2-blue)
 ![Plataforma](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![Interface](https://img.shields.io/badge/TUI-rich%20%2B%20questionary-ff69b4)
@@ -172,7 +172,7 @@ como plano B.
 ```text
 ╔════════════════════════════════════════════════════════════════════╗
 ║                                                                    ║
-║      ⚙  Otimizador PC  v1.4.1                                      ║
+║      ⚙  Otimizador PC  v1.4.2                                      ║
 ║                                                                    ║
 ║      Diagnóstico e ajustes seguros para Windows 10 e 11            ║
 ║                                                                    ║
@@ -183,7 +183,7 @@ como plano B.
 ║                                                                    ║
 ╚════════════════════════════════════════════════════════════════════╝
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  ⚙  Otimizador PC  v1.4.1                                          ┃
+┃  ⚙  Otimizador PC  v1.4.2                                          ┃
 ┃  Privilégio: ✔ administrador   │   🧪 Simulação: ○ desligado       ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
