@@ -5,7 +5,7 @@
 ### Diagnóstico e ajustes **seguros** para Windows 10 e 11 — direto do terminal, em português 🇧🇷
 
 [![Build do .exe (Windows)](https://github.com/Caionickpi/otimizador-pc/actions/workflows/build.yml/badge.svg)](https://github.com/Caionickpi/otimizador-pc/actions/workflows/build.yml)
-![Versão](https://img.shields.io/badge/vers%C3%A3o-1.3.0-blue)
+![Versão](https://img.shields.io/badge/vers%C3%A3o-1.4.0-blue)
 ![Plataforma](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![Interface](https://img.shields.io/badge/TUI-rich%20%2B%20questionary-ff69b4)
@@ -27,7 +27,9 @@ acontece sem você aprovar.
 
 - [✨ Recursos](#-recursos)
 - [🔥 Aba Avançados (jogos e desempenho)](#-aba-avançados-jogos-e-desempenho)
+- [🖱 Reduzir input lag](#-reduzir-input-lag-mouse-teclado-monitor)
 - [🎯 Otimização por jogo](#-otimização-por-jogo)
+- [🔄 Atualização automática](#-atualização-automática)
 - [🛡️ O que o programa nunca faz](#️-o-que-o-programa-nunca-faz)
 - [🖼️ Prévia da interface](#️-prévia-da-interface)
 - [📥 Baixar o executável (.exe)](#-baixar-o-executável-exe-pronto)
@@ -61,8 +63,11 @@ acontece sem você aprovar.
   | ✨ | **Efeitos visuais** | Prioriza desempenho desligando animações pesadas |
   | 💽 | **Disco** | Desfragmenta **só HDD**; faz **TRIM** em SSD |
   | 🔥 | **Avançado** | Otimizações "pesadas" para **jogos e desempenho máximo** (risco médio/alto) — veja abaixo |
+  | 🖱 | **Input lag** | Reduz a **latência de entrada** de **mouse, teclado e monitor** (a maioria **sem admin**) |
   | 🎯 | **Por jogo** | **Detecta os jogos instalados** e otimiza o PC para o jogo escolhido, adaptado ao hardware |
 
+- **🔄 Atualização automática**: verifica novas versões no GitHub e, no `.exe`,
+  **baixa e se atualiza sozinho** (com a sua confirmação).
 - **🔒 Mecanismos de segurança**: ponto de restauração do sistema, backup de
   registro (`.reg`), **modo simulação (dry-run)**, confirmação dupla,
   **desfazer última alteração** e logging completo.
@@ -96,6 +101,22 @@ acontece sem você aprovar.
 > 💡 Os ajustes de energia (Plano Máximo, *Power Throttling*) **não** são
 > indicados para notebook na bateria, pois aumentam o consumo e o aquecimento.
 
+## 🖱 Reduzir input lag (mouse, teclado, monitor)
+
+Ajustes focados na **latência de entrada** — aquele atraso entre você mexer no
+periférico e a tela responder. **A maioria fica em `HKCU`, então não exige
+administrador**, e tudo é reversível em *Desfazer última alteração*.
+
+| Pacote | O que faz | Risco |
+|--------|-----------|:-----:|
+| **🖱 Mouse 1:1** | Desativa a *precisão aprimorada do ponteiro* (aceleração) e fixa a sensibilidade no padrão 6/11 — movimento **linear** com a mira | 🟢 Baixo |
+| **⌨ Teclado responsivo** | Desliga Teclas de Aderência/Filtragem/Alternância (o atraso e o atalho do Shift 5×) e coloca a **repetição de tecla** no mais rápido | 🟢 Baixo |
+| **🖥 Monitor/exibição** | Desativa as **Otimizações de Tela Cheia (FSE)** e o Game DVR — caminho de **menor latência de apresentação** | 🟠 Médio |
+| **⚡ Aplicar tudo** | Aplica os três pacotes de uma vez | 🟢🟠 Baixo–médio |
+
+> 💡 A maior parte dos efeitos de mouse/teclado entra em vigor após
+> **logoff/login** (ou reiniciar). Como sempre, dá para reverter tudo.
+
 ## 🎯 Otimização por jogo
 
 Uma **experiência única para cada PC**: o programa detecta o hardware
@@ -120,6 +141,21 @@ e otimiza o PC para o jogo que você escolher.
 > um "desfazer" preciso (restaura/remap o que mudou) e respeita o **Modo
 > simulação**.
 
+## 🔄 Atualização automática
+
+O programa **se mantém atualizado sozinho**. Ao abrir, ele faz uma checagem
+rápida e silenciosa no GitHub (sem incomodar se você estiver offline ou já na
+última versão). Há também a opção **`🔄 Verificar atualizações`** no menu.
+
+Quando existe uma versão mais nova, ele mostra as novidades e, **com a sua
+confirmação**, no `.exe` ele **baixa a nova versão, fecha, troca o executável e
+reabre já atualizado** — sem você precisar baixar nada à mão. Se algo falhar
+(antivírus, rede), ele abre a **página de download** como plano B.
+
+> ℹ️ O download automático usa a **API pública de releases** do GitHub — por
+> isso o repositório precisa estar **público**. Rodando pelo código-fonte (não
+> pelo `.exe`), ele apenas avisa e abre a página de download.
+
 ## 🛡️ O que o programa **nunca** faz
 
 - ❌ Nunca desativa antivírus, Windows Defender ou firewall.
@@ -133,7 +169,7 @@ e otimiza o PC para o jogo que você escolher.
 ```text
 ╔════════════════════════════════════════════════════════════════════╗
 ║                                                                    ║
-║      ⚙  Otimizador PC  v1.1.0                                      ║
+║      ⚙  Otimizador PC  v1.4.0                                      ║
 ║                                                                    ║
 ║      Diagnóstico e ajustes seguros para Windows 10 e 11            ║
 ║                                                                    ║
@@ -144,7 +180,7 @@ e otimiza o PC para o jogo que você escolher.
 ║                                                                    ║
 ╚════════════════════════════════════════════════════════════════════╝
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  ⚙  Otimizador PC  v1.1.0                                          ┃
+┃  ⚙  Otimizador PC  v1.4.0                                          ┃
 ┃  Privilégio: ✔ administrador   │   🧪 Simulação: ○ desligado       ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
@@ -162,12 +198,14 @@ e otimiza o PC para o jogo que você escolher.
     9)  💽  Otimização de disco
     ─── Avançado · risco ───
    10)  🔥  Otimizações avançadas (jogos e desempenho)
+   11)  🖱  Reduzir input lag (mouse/teclado/monitor)
     ─── Por jogo ───
-   11)  🎯  Otimizar para um jogo (detecta no PC)
+   12)  🎯  Otimizar para um jogo (detecta no PC)
     ─── Ferramentas ───
-   12)  🧪  Modo simulação (ligar)
-   13)  ↩  Desfazer última alteração
-   14)  📜  Ver logs
+   13)  🧪  Modo simulação (ligar)
+   14)  ↩  Desfazer última alteração
+   15)  📜  Ver logs
+   16)  🔄  Verificar atualizações
     0)  🚪  Sair
 ```
 
@@ -237,6 +275,7 @@ otimizador-pc/
 │   ├── seguranca.py            # Restauração, backups, logging, desfazer
 │   ├── interface.py            # Componentes da TUI (rich + questionary)
 │   ├── elevacao.py             # Privilégios de administrador (UAC)
+│   ├── atualizacao.py          # 🔄 Auto-update via GitHub Releases
 │   └── tweaks/
 │       ├── limpeza.py
 │       ├── inicializacao.py
@@ -246,6 +285,7 @@ otimizador-pc/
 │       ├── visual.py
 │       ├── disco.py
 │       ├── avancado.py         # 🔥 Otimizações avançadas (jogos/desempenho)
+│       ├── inputlag.py         # 🖱 Reduzir input lag (mouse/teclado/monitor)
 │       └── otimizar_jogo.py    # 🎯 Otimização por jogo (detecta + adapta)
 ├── dados/
 │   └── servicos_seguros.json   # Whitelist de serviços seguros

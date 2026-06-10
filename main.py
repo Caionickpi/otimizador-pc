@@ -17,12 +17,13 @@ import traceback
 from typing import Any, Callable
 
 import config
-from modulos import diagnostico, elevacao, interface, recomendacoes, seguranca
+from modulos import atualizacao, diagnostico, elevacao, interface, recomendacoes, seguranca
 from modulos.tweaks import (
     avancado,
     disco,
     energia,
     inicializacao,
+    inputlag,
     limpeza,
     otimizar_jogo,
     rede,
@@ -63,6 +64,18 @@ def _tratar_privilegios(estado: config.EstadoApp) -> None:
         elevacao.elevar_e_encerrar()  # encerra este processo se conseguir elevar
         # Se chegou aqui, a elevação falhou ou foi recusada:
         interface.info("Seguindo em modo somente-leitura (sem privilégios de admin).")
+
+
+def _verificar_atualizacao_inicial(estado: config.EstadoApp) -> None:
+    """Checagem automática e silenciosa de atualização no início (best-effort).
+
+    Nunca pode atrapalhar a abertura: timeout curto e qualquer erro (sem
+    internet, sem release etc.) é engolido — só avisa se houver versão nova.
+    """
+    try:
+        atualizacao.verificar(estado, no_inicio=True)
+    except Exception as exc:  # noqa: BLE001 - a abertura nunca pode quebrar por isso
+        seguranca.registrar(f"Checagem de atualização no início falhou: {exc}", logging.WARNING)
 
 
 # ---------------------------------------------------------------------------
@@ -165,9 +178,9 @@ def _acao_ver_logs(estado: config.EstadoApp) -> None:
 def _rotulo_admin(estado: config.EstadoApp) -> str:
     """Texto curto indicando o nível de privilégio."""
     return (
-        "[green]✔ administrador[/green]"
+        f"[{config.COR_OK}]✔ administrador[/]"
         if estado.eh_admin
-        else "[yellow]● usuário comum[/yellow]"
+        else f"[{config.COR_AVISO}]● usuário comum[/]"
     )
 
 
@@ -178,10 +191,15 @@ def _menu_principal(estado: config.EstadoApp) -> None:
     """Laço do menu principal."""
     while True:
         interface.limpar_tela()
-        sim = "[green]● LIGADO[/green]" if estado.simulacao else "[dim]○ desligado[/dim]"
+        sim = (
+            f"[{config.COR_OK}]● LIGADO[/]"
+            if estado.simulacao
+            else f"[{config.COR_DIM}]○ desligado[/]"
+        )
         interface.cabecalho(
-            f"⚙  {config.NOME_APP}  [dim]v{config.VERSAO_APP}[/dim]",
-            f"Privilégio: {_rotulo_admin(estado)}    │    🧪 Simulação: {sim}",
+            f"⚙  {config.NOME_APP}  [{config.COR_DIM}]v{config.VERSAO_APP}[/]",
+            f"Privilégio: {_rotulo_admin(estado)}    [{config.COR_DIM}]│[/]    "
+            f"🧪 Simulação: {sim}",
         )
 
         opcoes: list[Any] = [
@@ -197,12 +215,14 @@ def _menu_principal(estado: config.EstadoApp) -> None:
             ("9)  💽  Otimização de disco", "disco"),
             interface.separador("Avançado · risco"),
             ("10) 🔥  Otimizações avançadas (jogos e desempenho)", "avancado"),
+            ("11) 🖱  Reduzir input lag (mouse/teclado/monitor)", "inputlag"),
             interface.separador("Por jogo"),
-            ("11) 🎯  Otimizar para um jogo (detecta no PC)", "otimizar_jogo"),
+            ("12) 🎯  Otimizar para um jogo (detecta no PC)", "otimizar_jogo"),
             interface.separador("Ferramentas"),
-            (f"12) 🧪  Modo simulação ({'desligar' if estado.simulacao else 'ligar'})", "simulacao"),
-            ("13) ↩  Desfazer última alteração", "desfazer"),
-            ("14) 📜  Ver logs", "logs"),
+            (f"13) 🧪  Modo simulação ({'desligar' if estado.simulacao else 'ligar'})", "simulacao"),
+            ("14) ↩  Desfazer última alteração", "desfazer"),
+            ("15) 📜  Ver logs", "logs"),
+            ("16) 🔄  Verificar atualizações", "atualizacao"),
             ("0)  🚪  Sair", "sair"),
         ]
         escolha = interface.menu_selecao("Escolha uma opção:", opcoes)
@@ -222,10 +242,12 @@ def _menu_principal(estado: config.EstadoApp) -> None:
             "visual": ("Efeitos visuais", lambda: visual.menu(estado)),
             "disco": ("Disco", lambda: disco.menu(estado)),
             "avancado": ("Otimizações avançadas", lambda: avancado.menu(estado)),
+            "inputlag": ("Reduzir input lag", lambda: inputlag.menu(estado)),
             "otimizar_jogo": ("Otimização por jogo", lambda: otimizar_jogo.menu(estado)),
             "simulacao": ("Modo simulação", lambda: _acao_simulacao(estado)),
             "desfazer": ("Desfazer", lambda: _acao_desfazer(estado)),
             "logs": ("Ver logs", lambda: _acao_ver_logs(estado)),
+            "atualizacao": ("Verificar atualizações", lambda: atualizacao.verificar(estado)),
         }
 
         if escolha in acoes:
@@ -261,6 +283,7 @@ def main() -> int:
         interface.tela_boas_vindas()
         _verificar_ambiente(estado)
         _tratar_privilegios(estado)
+        _verificar_atualizacao_inicial(estado)
         _menu_principal(estado)
     except KeyboardInterrupt:
         interface.linha_em_branco()
