@@ -49,6 +49,33 @@ if sys.platform.startswith("win"):
 else:
     console = Console()
 
+
+def preparar_console_windows() -> None:
+    """Desativa o modo QuickEdit do console (melhor esforço; só no Windows).
+
+    No console clássico do Windows, QUALQUER clique dentro da janela ativa o
+    modo de seleção (QuickEdit) e CONGELA o programa inteiro até o usuário
+    apertar Esc/Enter — parece travamento e já causou relato de "freeze" em
+    campo. Desligamos o QuickEdit logo no início; o prompt_toolkit preserva
+    esse modo entre os menus. Qualquer falha aqui é ignorada (não é crítico).
+    """
+    if not sys.platform.startswith("win"):
+        return
+    try:
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        STD_INPUT_HANDLE = -10
+        ENABLE_QUICK_EDIT_MODE = 0x0040
+        ENABLE_EXTENDED_FLAGS = 0x0080
+        alca = kernel32.GetStdHandle(STD_INPUT_HANDLE)
+        modo = ctypes.c_uint32()
+        if kernel32.GetConsoleMode(alca, ctypes.byref(modo)):
+            novo = (modo.value | ENABLE_EXTENDED_FLAGS) & ~ENABLE_QUICK_EDIT_MODE
+            kernel32.SetConsoleMode(alca, novo)
+    except Exception:  # noqa: BLE001 - proteção extra nunca pode quebrar a abertura
+        pass
+
 # Tema do menu (questionary/prompt_toolkit). IMPORTANTE: o questionary pinta
 # TODAS as linhas não selecionadas com a classe "text" e a linha atual com
 # "highlighted" — então damos cor às duas para o menu nunca ficar "morto".
