@@ -5,7 +5,7 @@
 ### Diagnóstico e ajustes **seguros** para Windows 10 e 11 — direto do terminal, em português 🇧🇷
 
 [![Build do .exe (Windows)](https://github.com/Caionickpi/otimizador-pc/actions/workflows/build.yml/badge.svg)](https://github.com/Caionickpi/otimizador-pc/actions/workflows/build.yml)
-![Versão](https://img.shields.io/badge/vers%C3%A3o-1.4.0-blue)
+![Versão](https://img.shields.io/badge/vers%C3%A3o-1.4.1-blue)
 ![Plataforma](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![Interface](https://img.shields.io/badge/TUI-rich%20%2B%20questionary-ff69b4)
@@ -149,8 +149,11 @@ rápida e silenciosa no GitHub (sem incomodar se você estiver offline ou já na
 
 Quando existe uma versão mais nova, ele mostra as novidades e, **com a sua
 confirmação**, no `.exe` ele **baixa a nova versão, fecha, troca o executável e
-reabre já atualizado** — sem você precisar baixar nada à mão. Se algo falhar
-(antivírus, rede), ele abre a **página de download** como plano B.
+reabre já atualizado** — sem você precisar baixar nada à mão. O download é
+**verificado** (tamanho + SHA-256 + assinatura de executável) antes da troca, e
+o atualizador roda numa **janela visível** com limite de tentativas — se algo
+falhar (antivírus, rede), ele explica o motivo e abre a **página de download**
+como plano B.
 
 > ℹ️ O download automático usa a **API pública de releases** do GitHub — por
 > isso o repositório precisa estar **público**. Rodando pelo código-fonte (não
@@ -169,7 +172,7 @@ reabre já atualizado** — sem você precisar baixar nada à mão. Se algo falh
 ```text
 ╔════════════════════════════════════════════════════════════════════╗
 ║                                                                    ║
-║      ⚙  Otimizador PC  v1.4.0                                      ║
+║      ⚙  Otimizador PC  v1.4.1                                      ║
 ║                                                                    ║
 ║      Diagnóstico e ajustes seguros para Windows 10 e 11            ║
 ║                                                                    ║
@@ -180,7 +183,7 @@ reabre já atualizado** — sem você precisar baixar nada à mão. Se algo falh
 ║                                                                    ║
 ╚════════════════════════════════════════════════════════════════════╝
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  ⚙  Otimizador PC  v1.4.0                                          ┃
+┃  ⚙  Otimizador PC  v1.4.1                                          ┃
 ┃  Privilégio: ✔ administrador   │   🧪 Simulação: ○ desligado       ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 

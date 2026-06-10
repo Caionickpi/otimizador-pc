@@ -279,6 +279,8 @@ def main() -> int:
     estado = config.EstadoApp()
 
     try:
+        # Evita o "congelamento por clique" do console clássico (QuickEdit).
+        interface.preparar_console_windows()
         interface.limpar_tela()
         interface.tela_boas_vindas()
         _verificar_ambiente(estado)

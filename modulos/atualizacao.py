@@ -18,6 +18,7 @@ PÚBLICOS. Em repositório privado, a API pública responde 404 e caímos no avi
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -38,9 +39,10 @@ _TIMEOUT_INICIO = 5
 _TIMEOUT_MANUAL = 8
 _USER_AGENT = f"{config.NOME_APP}/{config.VERSAO_APP} (auto-update)"
 
-# Flags do Windows para desacoplar o processo do .bat atualizador.
-_DETACHED_PROCESS = 0x00000008
-_CREATE_NEW_PROCESS_GROUP = 0x00000200
+# O .bat atualizador roda numa janela PRÓPRIA e VISÍVEL: o usuário vê o
+# progresso ("aguardando o programa fechar...") e, se algo falhar, vê o motivo
+# — antes ele rodava invisível e uma falha parecia "não aconteceu nada".
+_CREATE_NEW_CONSOLE = 0x00000010
 
 
 # ---------------------------------------------------------------------------
@@ -98,8 +100,16 @@ def obter_release_recente(timeout: int = _TIMEOUT_MANUAL) -> tuple[Optional[dict
     except urlerror.HTTPError as exc:
         if exc.code == 404:
             return None, (
-                "Nenhum release público encontrado (o repositório pode estar "
-                "privado ou ainda não há versões publicadas)."
+                "Nenhum release público encontrado.\n"
+                "Causa mais comum: o repositório no GitHub está PRIVADO — a "
+                "verificação de atualização usa a API pública, então o dono "
+                "precisa torná-lo público (Settings → Change visibility) para "
+                "o auto-update funcionar."
+            )
+        if exc.code == 403:
+            return None, (
+                "O GitHub limitou as consultas deste endereço temporariamente "
+                "(rate limit). Tente novamente em alguns minutos."
             )
         return None, f"Falha ao consultar atualizações (HTTP {exc.code})."
     except (urlerror.URLError, TimeoutError, OSError) as exc:
@@ -111,10 +121,16 @@ def obter_release_recente(timeout: int = _TIMEOUT_MANUAL) -> tuple[Optional[dict
     # Localiza o asset do executável pelo nome (robusto a maiúsc./minúsc.).
     url_download = ""
     tamanho = 0
+    sha256 = ""
     for asset in dados.get("assets", []) or []:
         if str(asset.get("name", "")).lower() == config.NOME_EXECUTAVEL.lower():
             url_download = str(asset.get("browser_download_url", ""))
             tamanho = int(asset.get("size", 0) or 0)
+            # O GitHub publica o hash do asset ("digest": "sha256:<hex>") —
+            # usamos para conferir a integridade do download.
+            digest = str(asset.get("digest", "") or "")
+            if digest.lower().startswith("sha256:"):
+                sha256 = digest.split(":", 1)[1].strip().lower()
             break
 
     info = {
@@ -125,6 +141,7 @@ def obter_release_recente(timeout: int = _TIMEOUT_MANUAL) -> tuple[Optional[dict
         "url_pagina": str(dados.get("html_url", "") or config.URL_PAGINA_RELEASES),
         "url_download": url_download,
         "tamanho": tamanho,
+        "sha256": sha256,
     }
     return info, ""
 
@@ -132,8 +149,39 @@ def obter_release_recente(timeout: int = _TIMEOUT_MANUAL) -> tuple[Optional[dict
 # ---------------------------------------------------------------------------
 # Download e troca do executável
 # ---------------------------------------------------------------------------
-def _baixar(url: str, destino: Path, tamanho_esperado: int = 0) -> tuple[bool, str]:
-    """Baixa um arquivo exibindo barra de progresso. Retorna ``(sucesso, msg)``."""
+def _validar_download(destino: Path, tamanho_esperado: int, sha256_esperado: str) -> tuple[bool, str]:
+    """Valida o arquivo baixado: tamanho, assinatura PE ("MZ") e SHA-256.
+
+    Evita trocar o executável por um download truncado, por uma página de erro
+    em HTML ou por um arquivo corrompido/adulterado no caminho.
+    """
+    try:
+        if not destino.exists():
+            return False, "O arquivo baixado não foi encontrado."
+        if tamanho_esperado and destino.stat().st_size != tamanho_esperado:
+            return False, "O arquivo baixado ficou incompleto (tamanho diferente do esperado)."
+        with destino.open("rb") as arquivo:
+            if arquivo.read(2) != b"MZ":
+                return False, "O arquivo baixado não é um executável válido do Windows."
+            arquivo.seek(0)
+            if sha256_esperado:
+                resumo = hashlib.sha256()
+                while True:
+                    pedaco = arquivo.read(1024 * 1024)
+                    if not pedaco:
+                        break
+                    resumo.update(pedaco)
+                if resumo.hexdigest().lower() != sha256_esperado.lower():
+                    return False, "A verificação de integridade (SHA-256) do download falhou."
+    except OSError as exc:
+        return False, f"Não consegui validar o download: {exc}"
+    return True, "ok"
+
+
+def _baixar(
+    url: str, destino: Path, tamanho_esperado: int = 0, sha256_esperado: str = ""
+) -> tuple[bool, str]:
+    """Baixa um arquivo exibindo barra de progresso e valida a integridade."""
     requisicao = urlrequest.Request(url, headers={"User-Agent": _USER_AGENT})
     try:
         with urlrequest.urlopen(requisicao, timeout=30) as resposta:
@@ -153,11 +201,11 @@ def _baixar(url: str, destino: Path, tamanho_esperado: int = 0) -> tuple[bool, s
         _remover_silencioso(destino)
         return False, f"Falha no download: {exc}"
 
-    # Confere o tamanho anunciado pelo release (proteção contra download truncado).
-    if tamanho_esperado and destino.exists() and destino.stat().st_size != tamanho_esperado:
+    ok, msg = _validar_download(destino, tamanho_esperado, sha256_esperado)
+    if not ok:
         _remover_silencioso(destino)
-        return False, "O arquivo baixado ficou incompleto (tamanho diferente do esperado)."
-    return True, "Download concluído."
+        return False, msg
+    return True, "Download concluído e verificado."
 
 
 def _remover_silencioso(caminho: Path) -> None:
@@ -168,36 +216,65 @@ def _remover_silencioso(caminho: Path) -> None:
         pass
 
 
+def _montar_bat(novo_exe: Path, exe_atual: Path) -> str:
+    """Monta o conteúdo do ``.bat`` que aplica a atualização.
+
+    Decisões (corrigem falhas observadas em campo):
+        * ``ping -n 2 127.0.0.1`` como pausa de ~1s — o comando ``timeout``
+          falha quando o ``.bat`` roda sem console interativo, o que fazia o
+          laço antigo virar busy-loop.
+        * Limite de 60 tentativas (~1 min): se o executável não liberar (ex.:
+          antivírus segurando o arquivo), o atualizador DESISTE com uma
+          mensagem clara e reabre a versão atual — nunca fica em laço infinito.
+        * Mensagens em ASCII puro (sem acentos) para não depender de codepage.
+        * ``del "%~f0" & exit`` na mesma linha: o cmd lê a linha inteira antes
+          de o arquivo se autoexcluir.
+    """
+    return (
+        "@echo off\r\n"
+        f"title Atualizando {config.NOME_APP}\r\n"
+        "echo.\r\n"
+        f"echo   Atualizando o {config.NOME_APP}... NAO feche esta janela.\r\n"
+        "echo   (aguardando o programa fechar para trocar o executavel)\r\n"
+        "set tentativas=0\r\n"
+        ":mover\r\n"
+        "set /a tentativas+=1\r\n"
+        "if %tentativas% gtr 60 goto falhou\r\n"
+        "ping -n 2 127.0.0.1 >nul\r\n"
+        f'move /y "{novo_exe}" "{exe_atual}" >nul 2>&1\r\n'
+        "if errorlevel 1 goto mover\r\n"
+        "echo   Atualizacao aplicada com sucesso! Abrindo o programa...\r\n"
+        f'start "" "{exe_atual}"\r\n'
+        'del "%~f0" & exit\r\n'
+        ":falhou\r\n"
+        "echo.\r\n"
+        "echo   NAO consegui trocar o executavel (antivirus segurando o arquivo?).\r\n"
+        f"echo   A nova versao ficou salva em: {novo_exe}\r\n"
+        "echo   Voce pode substituir manualmente. Vou reabrir a versao atual.\r\n"
+        f'start "" "{exe_atual}"\r\n'
+        "pause\r\n"
+        'del "%~f0" & exit\r\n'
+    )
+
+
 def _aplicar_autoupdate(novo_exe: Path) -> tuple[bool, str]:
     """Agenda a troca do executável atual pelo novo e reinicia o programa.
 
     Cria um ``.bat`` que espera este processo terminar (tentando mover em laço
     até conseguir, pois o ``.exe`` fica travado enquanto roda), substitui o
-    executável, reabre o programa e se autoexclui. Só faz sentido com o
-    programa empacotado (frozen) no Windows.
+    executável, reabre o programa e se autoexclui. O ``.bat`` roda numa janela
+    própria e visível, com limite de tentativas e mensagem de erro clara.
+    Só faz sentido com o programa empacotado (frozen) no Windows.
     """
     exe_atual = Path(sys.executable).resolve()
     bat = config.PASTA_EXECUCAO / "_atualizar_otimizador.bat"
-    # "%~f0" dentro do .bat = o próprio arquivo (usado para autoexclusão).
-    conteudo = (
-        "@echo off\r\n"
-        "chcp 65001 >nul\r\n"
-        f"title Atualizando {config.NOME_APP}\r\n"
-        "echo.\r\n"
-        f"echo   Atualizando {config.NOME_APP}... aguarde alguns segundos.\r\n"
-        ":mover\r\n"
-        "timeout /t 1 /nobreak >nul\r\n"
-        f'move /y "{novo_exe}" "{exe_atual}" >nul 2>&1\r\n'
-        "if errorlevel 1 goto mover\r\n"
-        f'start "" "{exe_atual}"\r\n'
-        'del "%~f0"\r\n'
-    )
     try:
-        bat.write_text(conteudo, encoding="utf-8")
-    except OSError as exc:
+        # ASCII estrito: garante que o cmd interprete igual em qualquer codepage.
+        bat.write_text(_montar_bat(novo_exe, exe_atual), encoding="ascii")
+    except (OSError, UnicodeEncodeError) as exc:
         return False, f"Não consegui preparar o atualizador: {exc}"
 
-    bandeiras = (_DETACHED_PROCESS | _CREATE_NEW_PROCESS_GROUP) if sys.platform.startswith("win") else 0
+    bandeiras = _CREATE_NEW_CONSOLE if sys.platform.startswith("win") else 0
     try:
         subprocess.Popen(
             ["cmd", "/c", str(bat)],
@@ -207,6 +284,7 @@ def _aplicar_autoupdate(novo_exe: Path) -> tuple[bool, str]:
         )
     except OSError as exc:
         return False, f"Não consegui iniciar o atualizador: {exc}"
+    seguranca.registrar(f"[atualizacao] atualizador iniciado: {bat}", logging.INFO)
     return True, "ok"
 
 
@@ -295,7 +373,7 @@ def verificar(estado: config.EstadoApp, *, no_inicio: bool = False) -> None:
         return
 
     destino = config.PASTA_EXECUCAO / (config.NOME_EXECUTAVEL + ".novo")
-    ok, msg = _baixar(info["url_download"], destino, info["tamanho"])
+    ok, msg = _baixar(info["url_download"], destino, info["tamanho"], info.get("sha256", ""))
     if not ok:
         interface.erro(f"{msg}\nVou abrir a página para download manual.")
         _abrir_pagina(info["url_pagina"])
