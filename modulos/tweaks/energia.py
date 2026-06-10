@@ -104,12 +104,25 @@ def menu(estado: config.EstadoApp) -> None:
         interface.erro("Este recurso só está disponível no Windows.")
         return
 
-    tem_bateria = bool(estado.perfil.get("energia", {}).get("tem_bateria"))
+    energia_perfil = estado.perfil.get("energia", {}) if estado.perfil else {}
+    if energia_perfil:
+        tem_bateria = bool(energia_perfil.get("eh_portatil", energia_perfil.get("tem_bateria")))
+        origem_deteccao = "diagnóstico"
+    else:
+        # Sem diagnóstico: reserva rápida via bateria (antes assumia desktop em
+        # silêncio — perigoso para as escolhas de plano em notebook).
+        try:
+            import psutil
+
+            tem_bateria = psutil.sensors_battery() is not None
+        except Exception:  # noqa: BLE001
+            tem_bateria = False
+        origem_deteccao = "detecção rápida — rode o Diagnóstico p/ precisão"
     tipo_maquina = "notebook" if tem_bateria else "desktop"
 
     interface.cabecalho(
         "Plano de energia",
-        f"Máquina detectada: {tipo_maquina}.",
+        f"Máquina detectada: {tipo_maquina} ({origem_deteccao}).",
     )
 
     guid_atual, nome_atual = _plano_ativo()

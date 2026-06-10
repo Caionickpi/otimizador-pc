@@ -48,7 +48,8 @@ def gerar_recomendacoes(perfil: dict[str, Any]) -> list[dict[str, Any]]:
     discos = perfil.get("armazenamento", [])
     energia = perfil.get("energia", {})
     inicializacao = perfil.get("inicializacao", [])
-    tem_bateria = bool(energia.get("tem_bateria"))
+    # Chassi primeiro: bateria sozinha confunde desktop com nobreak (UPS).
+    tem_bateria = bool(energia.get("eh_portatil", energia.get("tem_bateria")))
 
     _analisar_discos(discos, recs)
     _analisar_memoria(memoria, inicializacao, recs)

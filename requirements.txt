@@ -10,7 +10,8 @@ questionary==2.0.1
 
 # Detecção de hardware e sistema
 psutil==5.9.8
-py-cpuinfo==9.0.0
+# (py-cpuinfo foi removido: o nome da CPU vem do registro/WMI — instantâneo.
+#  O código tolera a ausência do pacote; sem ele o .exe fica menor.)
 
 # Acesso a WMI e à API do Windows (somente Windows)
 WMI==1.5.1 ; sys_platform == "win32"

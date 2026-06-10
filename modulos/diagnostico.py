@@ -242,6 +242,8 @@ def _coletar_armazenamento(c: Optional[Any], c_storage: Optional[Any]) -> list[d
 
     # 2) Tamanho/uso por unidade lógica (psutil), enriquecido com o tipo.
     for particao in psutil.disk_partitions(all=False):
+        if _particao_ignorada(particao):
+            continue
         try:
             uso = psutil.disk_usage(particao.mountpoint)
         except (PermissionError, OSError):
@@ -262,6 +264,17 @@ def _coletar_armazenamento(c: Optional[Any], c_storage: Optional[Any]) -> list[d
             }
         )
     return unidades
+
+
+def _particao_ignorada(particao: Any) -> bool:
+    """Decide se uma partição deve ficar fora do diagnóstico.
+
+    Unidades de REDE são puladas: consultar uso de um compartilhamento fora do
+    ar pode BLOQUEAR por muito tempo (travamento em setups com drives mapeados
+    mortos) — e defrag/TRIM não se aplicam a elas. CD/DVD também é pulado.
+    """
+    opcoes = (getattr(particao, "opts", "") or "").lower()
+    return "remote" in opcoes or "cdrom" in opcoes
 
 
 def _coletar_gpu(c: Optional[Any]) -> list[dict[str, Any]]:
@@ -350,14 +363,51 @@ def _coletar_inicializacao(c: Optional[Any]) -> list[dict[str, Any]]:
     return itens
 
 
-def _coletar_energia() -> dict[str, Any]:
-    """Coleta o plano de energia ativo e se há bateria (notebook x desktop)."""
-    dados: dict[str, Any] = {"plano_ativo": "-", "guid_ativo": "-", "tem_bateria": False}
+# Códigos de chassi (SMBIOS) que indicam máquina PORTÁTIL. Referência:
+# Win32_SystemEnclosure.ChassisTypes — 8..14 portáteis clássicos, 30..32
+# tablet/conversível/destacável, 18 módulo de expansão de notebook, 21 dock.
+_CHASSIS_PORTATEIS = {8, 9, 10, 11, 12, 14, 18, 21, 30, 31, 32}
+
+
+def _chassis_portatil(codigos: list[int]) -> Optional[bool]:
+    """Decide por chassi se a máquina é portátil. ``None`` = inconclusivo."""
+    if not codigos:
+        return None
+    return any(int(c) in _CHASSIS_PORTATEIS for c in codigos)
+
+
+def _coletar_energia(c: Optional[Any] = None) -> dict[str, Any]:
+    """Coleta o plano de energia ativo e o tipo de máquina (notebook x desktop).
+
+    A presença de bateria sozinha engana: um NOBREAK (UPS) ligado via USB
+    aparece como bateria e faria um desktop passar por notebook. Por isso o
+    critério principal é o TIPO DE CHASSI (SMBIOS); a bateria fica de reserva
+    quando o chassi é inconclusivo.
+    """
+    dados: dict[str, Any] = {
+        "plano_ativo": "-",
+        "guid_ativo": "-",
+        "tem_bateria": False,
+        "eh_portatil": False,
+    }
     try:
         bateria = psutil.sensors_battery()
         dados["tem_bateria"] = bateria is not None
     except Exception:  # noqa: BLE001
         pass
+
+    portatil = None
+    if c is not None:
+        try:
+            for gabinete in c.Win32_SystemEnclosure():
+                codigos = [int(x) for x in (getattr(gabinete, "ChassisTypes", None) or [])]
+                portatil = _chassis_portatil(codigos)
+                if portatil is not None:
+                    break
+        except Exception as exc:  # noqa: BLE001
+            seguranca.registrar(f"Leitura do chassi via WMI falhou: {exc}", logging.WARNING)
+    dados["eh_portatil"] = dados["tem_bateria"] if portatil is None else portatil
+
     if sys.platform.startswith("win"):
         codigo, saida, _err = seguranca.executar_comando(["powercfg", "/getactivescheme"], timeout=20)
         if codigo == 0 and saida:
@@ -407,7 +457,7 @@ def coletar_perfil() -> dict[str, Any]:
         ("Placa-mãe e BIOS", lambda: _coletar_placa_mae(c)),
         ("Rede", lambda: _coletar_rede(c)),
         ("Inicialização", lambda: _coletar_inicializacao(c)),
-        ("Energia", _coletar_energia),
+        ("Energia", lambda: _coletar_energia(c)),
     ]
 
     perfil: dict[str, Any] = {}
@@ -508,7 +558,13 @@ def exibir_perfil(perfil: dict[str, Any]) -> None:
         interface.imprimir_tabela(tabela)
 
     energia = perfil.get("energia", {})
-    tipo_maquina = "Notebook (com bateria)" if energia.get("tem_bateria") else "Desktop (sem bateria)"
+    portatil = energia.get("eh_portatil", energia.get("tem_bateria"))
+    if portatil:
+        tipo_maquina = "Notebook"
+    elif energia.get("tem_bateria"):
+        tipo_maquina = "Desktop (bateria detectada — provável nobreak/UPS)"
+    else:
+        tipo_maquina = "Desktop"
     interface.tabela_chave_valor(
         "Energia",
         [
