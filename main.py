@@ -24,6 +24,7 @@ from modulos import (
     diagnostico,
     elevacao,
     interface,
+    preferencias,
     recomendacoes,
     relatorio,
     saude,
@@ -81,10 +82,13 @@ def _tratar_privilegios(estado: config.EstadoApp) -> None:
 def _verificar_atualizacao_inicial(estado: config.EstadoApp) -> None:
     """Checagem automática e silenciosa de atualização no início (best-effort).
 
-    Nunca pode atrapalhar a abertura: timeout curto e qualquer erro (sem
+    Respeita a preferência do usuário ('Verificar atualizações ao abrir') e
+    nunca pode atrapalhar a abertura: timeout curto e qualquer erro (sem
     internet, sem release etc.) é engolido — só avisa se houver versão nova.
     """
     try:
+        if not preferencias.obter("verificar_atualizacao_inicio"):
+            return
         atualizacao.verificar(estado, no_inicio=True)
     except Exception as exc:  # noqa: BLE001 - a abertura nunca pode quebrar por isso
         seguranca.registrar(f"Checagem de atualização no início falhou: {exc}", logging.WARNING)
@@ -168,6 +172,56 @@ def _acao_desfazer(estado: config.EstadoApp) -> None:
     (interface.sucesso if ok else interface.erro)(msg)
 
 
+def _acao_reverter_tudo(estado: config.EstadoApp) -> None:
+    """Desfaz TODAS as alterações registradas, da mais recente à mais antiga.
+
+    Confiança em escala: o usuário pode experimentar os ajustes sabendo que um
+    único comando devolve o sistema ao estado anterior. Para na primeira falha
+    (para não pular etapas com dependência entre si).
+    """
+    acoes = seguranca.listar_acoes_desfazer()
+    if not acoes:
+        interface.info("Não há nenhuma alteração registrada para reverter.")
+        return
+
+    tabela = interface.nova_tabela(
+        f"Alterações registradas ({len(acoes)})", ["#", "O que será desfeito (da última para a primeira)"]
+    )
+    for indice, descricao in enumerate(reversed(acoes), start=1):
+        tabela.add_row(str(indice), interface.escapar(descricao))
+    interface.imprimir_tabela(tabela)
+
+    if estado.simulacao:
+        interface.info("MODO SIMULAÇÃO: as alterações acima seriam desfeitas. Nada foi alterado.")
+        return
+    interface.aviso(
+        "Vou desfazer TODAS as alterações acima, na ordem inversa em que foram "
+        "aplicadas. Itens de sistema (HKLM/serviços) podem exigir administrador."
+    )
+    if not interface.confirmar(f"Reverter as {len(acoes)} alterações agora?", padrao=False):
+        interface.info("Nada foi desfeito.")
+        return
+
+    desfeitas = 0
+    with interface.barra_progresso() as progresso:
+        tarefa = progresso.add_task("Revertendo", total=len(acoes))
+        while seguranca.ha_acoes_para_desfazer():
+            ok, msg = seguranca.desfazer_ultima_acao()
+            progresso.advance(tarefa)
+            if not ok:
+                interface.erro(
+                    f"Parei na alteração que falhou:\n{msg}\n\n"
+                    f"{desfeitas} alteração(ões) já tinham sido desfeitas — as demais "
+                    "continuam registradas para tentar de novo (ex.: como administrador)."
+                )
+                return
+            desfeitas += 1
+    interface.sucesso(
+        f"Pronto! {desfeitas} alteração(ões) desfeita(s). O sistema voltou ao "
+        "estado anterior aos ajustes do programa."
+    )
+
+
 def _acao_ver_logs(estado: config.EstadoApp) -> None:
     """Mostra as últimas linhas do log do dia e o caminho da pasta de logs."""
     from datetime import datetime
@@ -239,8 +293,10 @@ def _menu_principal(estado: config.EstadoApp) -> None:
             interface.separador("Ferramentas"),
             (f"18) 🧪  Modo simulação ({'desligar' if estado.simulacao else 'ligar'})", "simulacao"),
             ("19) ↩  Desfazer última alteração", "desfazer"),
-            ("20) 📜  Ver logs", "logs"),
-            ("21) 🔄  Verificar atualizações", "atualizacao"),
+            ("20) ⏮  Reverter TUDO (todas as alterações)", "reverter_tudo"),
+            ("21) ⚙  Preferências", "preferencias"),
+            ("22) 📜  Ver logs", "logs"),
+            ("23) 🔄  Verificar atualizações", "atualizacao"),
             ("0)  🚪  Sair", "sair"),
         ]
         escolha = interface.menu_selecao("Escolha uma opção:", opcoes)
@@ -269,6 +325,8 @@ def _menu_principal(estado: config.EstadoApp) -> None:
             "agendador": ("Manutenção automática", lambda: agendador.menu(estado)),
             "simulacao": ("Modo simulação", lambda: _acao_simulacao(estado)),
             "desfazer": ("Desfazer", lambda: _acao_desfazer(estado)),
+            "reverter_tudo": ("Reverter tudo", lambda: _acao_reverter_tudo(estado)),
+            "preferencias": ("Preferências", lambda: preferencias.menu(estado)),
             "logs": ("Ver logs", lambda: _acao_ver_logs(estado)),
             "atualizacao": ("Verificar atualizações", lambda: atualizacao.verificar(estado)),
         }

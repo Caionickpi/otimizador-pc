@@ -1,8 +1,10 @@
-"""Detecção de jogos instalados (Steam e Epic) — somente leitura e rápida.
+"""Detecção de jogos instalados (Steam, Epic, GOG e Ubisoft) — leitura rápida.
 
 Lê os metadados dos próprios launchers (sem varrer o disco inteiro):
-    * Steam: ``libraryfolders.vdf`` -> bibliotecas -> ``appmanifest_*.acf``.
-    * Epic:  manifestos ``*.item`` (JSON) em ProgramData.
+    * Steam:   ``libraryfolders.vdf`` -> bibliotecas -> ``appmanifest_*.acf``.
+    * Epic:    manifestos ``*.item`` (JSON) em ProgramData.
+    * GOG:     registro ``HKLM\\...\\GOG.com\\Games\\<id>`` (nome/pasta/exe).
+    * Ubisoft: registro ``HKLM\\...\\Ubisoft\\Launcher\\Installs`` (pasta).
 
 A descoberta do ``.exe`` de cada jogo é opcional e feita sob demanda (só para o
 jogo escolhido), mantendo a listagem instantânea. Tudo é tolerante a falhas:
@@ -180,6 +182,96 @@ def _jogos_steam() -> list[dict[str, Any]]:
     return jogos
 
 
+def _nome_amigavel_pasta(caminho: str) -> str:
+    """Deriva um nome de jogo legível do nome da pasta de instalação.
+
+    Usado quando o launcher não guarda o nome (Ubisoft): 'Assassins Creed IV'
+    a partir de '...\\games\\Assassins Creed IV'. Usa ``PureWindowsPath`` para
+    interpretar o caminho como Windows em qualquer SO (testável fora dele).
+    """
+    from pathlib import PureWindowsPath
+
+    nome = PureWindowsPath(str(caminho).rstrip("\\/")).name
+    return nome.replace("_", " ").replace("-", " ").strip() or str(caminho)
+
+
+def _jogos_gog() -> list[dict[str, Any]]:
+    """Jogos do GOG Galaxy via registro (HKLM\\...\\GOG.com\\Games\\<id>)."""
+    jogos: list[dict[str, Any]] = []
+    if winreg is None:
+        return jogos
+    for sub_base in (r"SOFTWARE\WOW6432Node\GOG.com\Games", r"SOFTWARE\GOG.com\Games"):
+        try:
+            base = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, sub_base)
+        except OSError:
+            continue
+        with base:
+            indice = 0
+            while True:
+                try:
+                    sub_id = winreg.EnumKey(base, indice)
+                except OSError:
+                    break
+                indice += 1
+                try:
+                    with winreg.OpenKey(base, sub_id) as chave:
+                        valores: dict[str, str] = {}
+                        for campo in ("gameName", "path", "exe"):
+                            try:
+                                v, _t = winreg.QueryValueEx(chave, campo)
+                                valores[campo] = str(v)
+                            except (FileNotFoundError, OSError):
+                                continue
+                except OSError:
+                    continue
+                nome = valores.get("gameName")
+                pasta = valores.get("path")
+                if not nome or not pasta:
+                    continue
+                jogos.append({
+                    "nome": nome, "origem": "GOG", "exe": valores.get("exe") or None,
+                    "pasta": pasta, "installdir": "",
+                })
+    return jogos
+
+
+def _jogos_ubisoft() -> list[dict[str, Any]]:
+    """Jogos do Ubisoft Connect via registro (Launcher\\Installs\\<id>).
+
+    O registro guarda só a pasta (InstallDir); o nome vem da própria pasta e o
+    ``.exe`` é resolvido depois, sob demanda, por :func:`achar_exe`.
+    """
+    jogos: list[dict[str, Any]] = []
+    if winreg is None:
+        return jogos
+    sub_base = r"SOFTWARE\WOW6432Node\Ubisoft\Launcher\Installs"
+    try:
+        base = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, sub_base)
+    except OSError:
+        return jogos
+    with base:
+        indice = 0
+        while True:
+            try:
+                sub_id = winreg.EnumKey(base, indice)
+            except OSError:
+                break
+            indice += 1
+            try:
+                with winreg.OpenKey(base, sub_id) as chave:
+                    pasta, _t = winreg.QueryValueEx(chave, "InstallDir")
+            except (FileNotFoundError, OSError):
+                continue
+            pasta = str(pasta).strip()
+            if not pasta:
+                continue
+            jogos.append({
+                "nome": _nome_amigavel_pasta(pasta), "origem": "Ubisoft", "exe": None,
+                "pasta": pasta, "installdir": "",
+            })
+    return jogos
+
+
 def _jogos_epic() -> list[dict[str, Any]]:
     jogos: list[dict[str, Any]] = []
     programdata = os.environ.get("PROGRAMDATA", r"C:\ProgramData")
@@ -214,9 +306,16 @@ def detectar_jogos(resolver_exe: bool = False) -> list[dict[str, Any]]:
     if not sys.platform.startswith("win"):
         return []
     jogos: list[dict[str, Any]] = []
-    for coletor in (_jogos_steam, _jogos_epic):
+    vistos: set[str] = set()
+    for coletor in (_jogos_steam, _jogos_epic, _jogos_gog, _jogos_ubisoft):
         try:
-            jogos.extend(coletor())
+            for jogo in coletor():
+                # Dedup entre lojas (mesmo jogo instalado por mais de um launcher).
+                chave = jogo["nome"].strip().lower()
+                if chave in vistos:
+                    continue
+                vistos.add(chave)
+                jogos.append(jogo)
         except Exception as exc:  # noqa: BLE001
             seguranca.registrar(f"[jogos] coletor falhou: {exc}", logging.WARNING)
     if resolver_exe:
