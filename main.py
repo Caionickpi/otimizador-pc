@@ -17,7 +17,18 @@ import traceback
 from typing import Any, Callable
 
 import config
-from modulos import atualizacao, diagnostico, elevacao, interface, recomendacoes, seguranca
+from modulos import (
+    agendador,
+    atualizacao,
+    desempenho,
+    diagnostico,
+    elevacao,
+    interface,
+    recomendacoes,
+    relatorio,
+    saude,
+    seguranca,
+)
 from modulos.tweaks import (
     avancado,
     disco,
@@ -26,6 +37,7 @@ from modulos.tweaks import (
     inputlag,
     limpeza,
     otimizar_jogo,
+    perfis,
     rede,
     servicos,
     visual,
@@ -218,11 +230,17 @@ def _menu_principal(estado: config.EstadoApp) -> None:
             ("11) 🖱  Reduzir input lag (mouse/teclado/monitor)", "inputlag"),
             interface.separador("Por jogo"),
             ("12) 🎯  Otimizar para um jogo (detecta no PC)", "otimizar_jogo"),
+            interface.separador("⭐ Premium"),
+            ("13) 🏆  Pontuação de saúde do PC", "saude"),
+            ("14) ⚡  Perfis de otimização (1 clique)", "perfis"),
+            ("15) 📊  Antes e depois (desempenho)", "desempenho"),
+            ("16) 📄  Gerar relatório (HTML)", "relatorio"),
+            ("17) 🗓️  Manutenção automática (agendar limpeza)", "agendador"),
             interface.separador("Ferramentas"),
-            (f"13) 🧪  Modo simulação ({'desligar' if estado.simulacao else 'ligar'})", "simulacao"),
-            ("14) ↩  Desfazer última alteração", "desfazer"),
-            ("15) 📜  Ver logs", "logs"),
-            ("16) 🔄  Verificar atualizações", "atualizacao"),
+            (f"18) 🧪  Modo simulação ({'desligar' if estado.simulacao else 'ligar'})", "simulacao"),
+            ("19) ↩  Desfazer última alteração", "desfazer"),
+            ("20) 📜  Ver logs", "logs"),
+            ("21) 🔄  Verificar atualizações", "atualizacao"),
             ("0)  🚪  Sair", "sair"),
         ]
         escolha = interface.menu_selecao("Escolha uma opção:", opcoes)
@@ -244,6 +262,11 @@ def _menu_principal(estado: config.EstadoApp) -> None:
             "avancado": ("Otimizações avançadas", lambda: avancado.menu(estado)),
             "inputlag": ("Reduzir input lag", lambda: inputlag.menu(estado)),
             "otimizar_jogo": ("Otimização por jogo", lambda: otimizar_jogo.menu(estado)),
+            "saude": ("Pontuação de saúde", lambda: saude.menu(estado)),
+            "perfis": ("Perfis de otimização", lambda: perfis.menu(estado)),
+            "desempenho": ("Antes e depois", lambda: desempenho.menu(estado)),
+            "relatorio": ("Relatório HTML", lambda: relatorio.menu(estado)),
+            "agendador": ("Manutenção automática", lambda: agendador.menu(estado)),
             "simulacao": ("Modo simulação", lambda: _acao_simulacao(estado)),
             "desfazer": ("Desfazer", lambda: _acao_desfazer(estado)),
             "logs": ("Ver logs", lambda: _acao_ver_logs(estado)),
@@ -272,6 +295,12 @@ def _sair(estado: config.EstadoApp) -> None:
 # ---------------------------------------------------------------------------
 def main() -> int:
     """Função principal. Retorna o código de saída do processo."""
+    # Execução silenciosa pela Tarefa Agendada (manutenção automática): roda a
+    # limpeza headless e sai, sem abrir a interface.
+    if "--tarefa-limpeza" in sys.argv:
+        config.garantir_pastas()
+        return agendador.executar_limpeza_headless()
+
     config.garantir_pastas()
     seguranca.configurar_logging()
     seguranca.registrar(f"Iniciando {config.NOME_APP} v{config.VERSAO_APP}.", logging.INFO)

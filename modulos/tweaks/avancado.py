@@ -25,6 +25,13 @@ try:  # pragma: no cover
 except Exception:  # noqa: BLE001
     winreg = None  # type: ignore
 
+# Constantes de tipo do registro com reserva (valores reais do Windows:
+# REG_SZ=1, REG_DWORD=4). Permitem que os CONSTRUTORES de valores — usados por
+# outros módulos (perfis, otimização por jogo) — sejam montados/testados mesmo
+# fora do Windows. As funções que de fato gravam no registro só rodam no Windows.
+_REG_DWORD = winreg.REG_DWORD if winreg is not None else 4
+_REG_SZ = winreg.REG_SZ if winreg is not None else 1
+
 
 # GUID do plano "Desempenho Máximo" (Ultimate Performance) embutido no Windows.
 _GUID_ULTIMATE = "e9a42b02-d5df-448d-aa00-03f14749eb61"
@@ -197,18 +204,18 @@ def valores_pacote_jogos() -> list[tuple[str, str, str, int, Any]]:
     """
     base = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile"
     return [
-        ("HKCU", r"Software\Microsoft\GameBar", "AllowAutoGameMode", winreg.REG_DWORD, 1),
-        ("HKCU", r"Software\Microsoft\GameBar", "AutoGameModeEnabled", winreg.REG_DWORD, 1),
-        ("HKCU", r"System\GameConfigStore", "GameDVR_Enabled", winreg.REG_DWORD, 0),
-        ("HKLM", r"SOFTWARE\Policies\Microsoft\Windows\GameDVR", "AllowGameDVR", winreg.REG_DWORD, 0),
-        ("HKLM", base, "SystemResponsiveness", winreg.REG_DWORD, 10),
-        ("HKLM", base + r"\Tasks\Games", "GPU Priority", winreg.REG_DWORD, 8),
-        ("HKLM", base + r"\Tasks\Games", "Priority", winreg.REG_DWORD, 6),
-        ("HKLM", base + r"\Tasks\Games", "Scheduling Category", winreg.REG_SZ, "High"),
-        ("HKLM", base + r"\Tasks\Games", "SFIO Priority", winreg.REG_SZ, "High"),
-        ("HKLM", r"SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode", winreg.REG_DWORD, 2),
+        ("HKCU", r"Software\Microsoft\GameBar", "AllowAutoGameMode", _REG_DWORD, 1),
+        ("HKCU", r"Software\Microsoft\GameBar", "AutoGameModeEnabled", _REG_DWORD, 1),
+        ("HKCU", r"System\GameConfigStore", "GameDVR_Enabled", _REG_DWORD, 0),
+        ("HKLM", r"SOFTWARE\Policies\Microsoft\Windows\GameDVR", "AllowGameDVR", _REG_DWORD, 0),
+        ("HKLM", base, "SystemResponsiveness", _REG_DWORD, 10),
+        ("HKLM", base + r"\Tasks\Games", "GPU Priority", _REG_DWORD, 8),
+        ("HKLM", base + r"\Tasks\Games", "Priority", _REG_DWORD, 6),
+        ("HKLM", base + r"\Tasks\Games", "Scheduling Category", _REG_SZ, "High"),
+        ("HKLM", base + r"\Tasks\Games", "SFIO Priority", _REG_SZ, "High"),
+        ("HKLM", r"SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode", _REG_DWORD, 2),
         ("HKLM", r"SYSTEM\CurrentControlSet\Control\PriorityControl",
-         "Win32PrioritySeparation", winreg.REG_DWORD, 38),
+         "Win32PrioritySeparation", _REG_DWORD, 38),
     ]
 
 
@@ -222,8 +229,8 @@ def valores_nagle() -> list[tuple[str, str, str, int, Any]]:
         if not guid:
             continue
         sub = f"{_CAMINHO_INTERFACES}\\{guid}"
-        saida.append(("HKLM", sub, "TcpAckFrequency", winreg.REG_DWORD, 1))
-        saida.append(("HKLM", sub, "TCPNoDelay", winreg.REG_DWORD, 1))
+        saida.append(("HKLM", sub, "TcpAckFrequency", _REG_DWORD, 1))
+        saida.append(("HKLM", sub, "TCPNoDelay", _REG_DWORD, 1))
     return saida
 
 
