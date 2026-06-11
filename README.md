@@ -5,7 +5,7 @@
 ### Diagnóstico e ajustes **seguros** para Windows 10 e 11 — direto do terminal, em português 🇧🇷
 
 [![Build do .exe (Windows)](https://github.com/Caionickpi/otimizador-pc/actions/workflows/build.yml/badge.svg)](https://github.com/Caionickpi/otimizador-pc/actions/workflows/build.yml)
-![Versão](https://img.shields.io/badge/vers%C3%A3o-1.4.2-blue)
+![Versão](https://img.shields.io/badge/vers%C3%A3o-1.5.0-blue)
 ![Plataforma](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![Interface](https://img.shields.io/badge/TUI-rich%20%2B%20questionary-ff69b4)
@@ -26,6 +26,7 @@ acontece sem você aprovar.
 ## 📑 Índice
 
 - [✨ Recursos](#-recursos)
+- [⭐ Recursos premium](#-recursos-premium)
 - [🔥 Aba Avançados (jogos e desempenho)](#-aba-avançados-jogos-e-desempenho)
 - [🖱 Reduzir input lag](#-reduzir-input-lag-mouse-teclado-monitor)
 - [🎯 Otimização por jogo](#-otimização-por-jogo)
@@ -71,6 +72,18 @@ acontece sem você aprovar.
 - **🔒 Mecanismos de segurança**: ponto de restauração do sistema, backup de
   registro (`.reg`), **modo simulação (dry-run)**, confirmação dupla,
   **desfazer última alteração** e logging completo.
+
+## ⭐ Recursos premium
+
+Recursos de nível superior — todos seguros e reversíveis como o resto do programa:
+
+| Recurso | O que faz |
+|---|---|
+| 🏆 **Pontuação de saúde** | Dá ao PC uma **nota de 0 a 100 (A–F)** e lista, em ordem, o que está custando pontos e **como resolver** |
+| ⚡ **Perfis 1-clique** | Aplica um pacote pronto e **adaptado ao seu hardware**: **🎮 Gamer**, **💼 Trabalho**, **🐌 Máquina fraca** ou **🔋 Notebook** |
+| 📊 **Antes e depois** | Mede o PC, você otimiza, mede de novo e mostra o **ganho real** (processos, RAM, inicialização, disco) |
+| 📄 **Relatório HTML** | Exporta diagnóstico + nota + recomendações num **arquivo bonito e autônomo** para guardar ou compartilhar |
+| 🗓️ **Manutenção automática** | Agenda a **limpeza** para rodar sozinha (Tarefa do Windows) — reversível a qualquer momento |
 
 ## 🔥 Aba Avançados (jogos e desempenho)
 
@@ -172,7 +185,7 @@ como plano B.
 ```text
 ╔════════════════════════════════════════════════════════════════════╗
 ║                                                                    ║
-║      ⚙  Otimizador PC  v1.4.2                                      ║
+║      ⚙  Otimizador PC  v1.5.0                                      ║
 ║                                                                    ║
 ║      Diagnóstico e ajustes seguros para Windows 10 e 11            ║
 ║                                                                    ║
@@ -183,7 +196,7 @@ como plano B.
 ║                                                                    ║
 ╚════════════════════════════════════════════════════════════════════╝
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  ⚙  Otimizador PC  v1.4.2                                          ┃
+┃  ⚙  Otimizador PC  v1.5.0                                          ┃
 ┃  Privilégio: ✔ administrador   │   🧪 Simulação: ○ desligado       ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
@@ -204,11 +217,17 @@ como plano B.
    11)  🖱  Reduzir input lag (mouse/teclado/monitor)
     ─── Por jogo ───
    12)  🎯  Otimizar para um jogo (detecta no PC)
+    ─── ⭐ Premium ───
+   13)  🏆  Pontuação de saúde do PC
+   14)  ⚡  Perfis de otimização (1 clique)
+   15)  📊  Antes e depois (desempenho)
+   16)  📄  Gerar relatório (HTML)
+   17)  🗓️  Manutenção automática (agendar limpeza)
     ─── Ferramentas ───
-   13)  🧪  Modo simulação (ligar)
-   14)  ↩  Desfazer última alteração
-   15)  📜  Ver logs
-   16)  🔄  Verificar atualizações
+   18)  🧪  Modo simulação (ligar)
+   19)  ↩  Desfazer última alteração
+   20)  📜  Ver logs
+   21)  🔄  Verificar atualizações
     0)  🚪  Sair
 ```
 
@@ -279,6 +298,10 @@ otimizador-pc/
 │   ├── interface.py            # Componentes da TUI (rich + questionary)
 │   ├── elevacao.py             # Privilégios de administrador (UAC)
 │   ├── atualizacao.py          # 🔄 Auto-update via GitHub Releases
+│   ├── saude.py                # 🏆 Pontuação de saúde do PC (premium)
+│   ├── desempenho.py           # 📊 Antes e depois (premium)
+│   ├── relatorio.py            # 📄 Relatório HTML (premium)
+│   ├── agendador.py            # 🗓️ Manutenção automática (premium)
 │   └── tweaks/
 │       ├── limpeza.py
 │       ├── inicializacao.py
@@ -289,6 +312,7 @@ otimizador-pc/
 │       ├── disco.py
 │       ├── avancado.py         # 🔥 Otimizações avançadas (jogos/desempenho)
 │       ├── inputlag.py         # 🖱 Reduzir input lag (mouse/teclado/monitor)
+│       ├── perfis.py           # ⚡ Perfis de otimização 1-clique (premium)
 │       └── otimizar_jogo.py    # 🎯 Otimização por jogo (detecta + adapta)
 ├── dados/
 │   └── servicos_seguros.json   # Whitelist de serviços seguros
