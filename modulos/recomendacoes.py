@@ -55,6 +55,7 @@ def gerar_recomendacoes(perfil: dict[str, Any]) -> list[dict[str, Any]]:
     _analisar_memoria(memoria, inicializacao, recs)
     _analisar_inicializacao(inicializacao, recs)
     _analisar_energia(energia, tem_bateria, recs)
+    _analisar_jogos_gpu(perfil, recs)
 
     # Recomendação geral de limpeza sempre disponível (baixo risco, útil).
     recs.append(
@@ -214,6 +215,32 @@ def _analisar_energia(
                 "baixa",
                 "Equilíbrio entre desempenho e duração da bateria.",
                 "energia",
+            )
+        )
+
+
+def _analisar_jogos_gpu(perfil: dict[str, Any], recs: list[dict[str, Any]]) -> None:
+    """Recomendações de jogo adaptadas à GPU e à VERSÃO do Windows.
+
+    Exemplo da escalabilidade por sistema: HAGS só é sugerido quando o build
+    suporta (Win10 2004+), e o texto cita o Windows detectado.
+    """
+    from modulos import hardware
+
+    hw = hardware.perfil_otimizacao(perfil)
+    if not hw.get("tem_dgpu"):
+        return
+    sistema = "Windows 11" if hw.get("win11") else "Windows 10"
+    if hw.get("suporta_hags"):
+        recs.append(
+            _nova(
+                f"GPU dedicada em {sistema}: ative o pacote de jogos",
+                "Sua máquina tem GPU dedicada e o sistema suporta o agendamento "
+                "de GPU por hardware (HAGS). Na aba Avançados (ou no perfil "
+                "Gamer), o pacote de jogos pode reduzir latência e melhorar FPS.",
+                "baixa",
+                "Mais desempenho em jogos com ajustes reversíveis.",
+                "avancado",
             )
         )
 

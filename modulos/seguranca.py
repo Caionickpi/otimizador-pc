@@ -403,6 +403,18 @@ def ha_acoes_para_desfazer() -> bool:
     return len(_ler_pilha_desfazer()) > 0
 
 
+def listar_acoes_desfazer() -> list[str]:
+    """Descrições de TODAS as ações reversíveis (da mais antiga à mais nova).
+
+    Somente leitura — usado pelo 'Reverter tudo' para mostrar o que será
+    desfeito antes de pedir confirmação.
+    """
+    return [
+        f"{e.get('descricao', '?')}  ({e.get('timestamp', '?')})"
+        for e in _ler_pilha_desfazer()
+    ]
+
+
 def descrever_ultima_acao() -> Optional[str]:
     """Retorna a descrição da última ação reversível, se houver."""
     pilha = _ler_pilha_desfazer()

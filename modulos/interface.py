@@ -196,8 +196,16 @@ def tela_boas_vindas() -> None:
     )
 
     # Dica de emojis coloridos: o console clássico (conhost) os mostra em P&B; o
-    # Windows Terminal mostra coloridos. Só sugerimos quando faz sentido.
+    # Windows Terminal mostra coloridos. Só sugerimos quando faz sentido — e o
+    # usuário pode desligar em Preferências (import tardio evita ciclo).
     if sys.platform.startswith("win") and not os.environ.get("WT_SESSION"):
+        try:
+            from modulos import preferencias
+
+            if not preferencias.obter("mostrar_dica_terminal"):
+                return
+        except Exception:  # noqa: BLE001 - a dica nunca pode quebrar a abertura
+            pass
         console.print(
             Text(
                 "  dica: abra no Windows Terminal para ver os emojis coloridos.",

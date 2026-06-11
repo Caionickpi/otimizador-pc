@@ -33,6 +33,16 @@ def _vendor_gpu(nome: str) -> str:
     return "-"
 
 
+def _build_windows(sistema: dict[str, Any]) -> int:
+    """Extrai o número do build do Windows do diagnóstico (0 se desconhecido)."""
+    bruto = str(sistema.get("build", "") or "")
+    digitos = "".join(c for c in bruto if c.isdigit())
+    try:
+        return int(digitos) if digitos else 0
+    except ValueError:
+        return 0
+
+
 def perfil_otimizacao(perfil: dict[str, Any]) -> dict[str, Any]:
     """Resume o diagnóstico em um perfil de decisão para os ajustes."""
     perfil = perfil or {}
@@ -41,6 +51,8 @@ def perfil_otimizacao(perfil: dict[str, Any]) -> dict[str, Any]:
     discos = perfil.get("armazenamento", []) or []
     energia = perfil.get("energia", {})
     cpu = perfil.get("cpu", {})
+    sistema = perfil.get("sistema", {})
+    build = _build_windows(sistema)
 
     vendors = [_vendor_gpu(g.get("modelo", "")) for g in gpus]
     reais = [v for v in vendors if v != "-"]
@@ -62,6 +74,12 @@ def perfil_otimizacao(perfil: dict[str, Any]) -> dict[str, Any]:
         # Chassi primeiro (bateria sozinha confunde desktop+nobreak c/ notebook).
         "notebook": bool(energia.get("eh_portatil", energia.get("tem_bateria"))),
         "nucleos": int(cpu.get("nucleos_fisicos", 0) or 0),
+        # Consciência de versão do Windows (build 22000+ = Windows 11): permite
+        # adaptar recomendações por sistema, não só por hardware.
+        "build": build,
+        "win11": build >= 22000,
+        # HAGS exige Windows 10 2004 (build 19041) ou mais novo.
+        "suporta_hags": build >= 19041,
     }
 
 

@@ -5,7 +5,7 @@
 ### Diagnóstico e ajustes **seguros** para Windows 10 e 11 — direto do terminal, em português 🇧🇷
 
 [![Build do .exe (Windows)](https://github.com/Caionickpi/otimizador-pc/actions/workflows/build.yml/badge.svg)](https://github.com/Caionickpi/otimizador-pc/actions/workflows/build.yml)
-![Versão](https://img.shields.io/badge/vers%C3%A3o-1.5.0-blue)
+![Versão](https://img.shields.io/badge/vers%C3%A3o-1.6.0-blue)
 ![Plataforma](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![Interface](https://img.shields.io/badge/TUI-rich%20%2B%20questionary-ff69b4)
@@ -57,7 +57,7 @@ acontece sem você aprovar.
   | # | Categoria | O que faz |
   |---|-----------|-----------|
   | 🧹 | **Limpeza** | Remove temporários, cache do Windows Update, Lixeira e miniaturas |
-  | 🚀 | **Inicialização** | Liga/desliga programas que abrem com o Windows (reversível) |
+  | 🚀 | **Inicialização** | Liga/desliga programas que abrem com o Windows — chaves Run **e pasta Iniciar** (reversível) |
   | 🛠 | **Serviços** | Ajusta apenas serviços de uma *whitelist* curada e segura |
   | 🔋 | **Energia** | Planos adaptados a desktop/notebook |
   | 🌐 | **Rede** | Flush DNS, renovar IP, resetar Winsock, DNS mais rápido |
@@ -65,7 +65,7 @@ acontece sem você aprovar.
   | 💽 | **Disco** | Desfragmenta **só HDD**; faz **TRIM** em SSD |
   | 🔥 | **Avançado** | Otimizações "pesadas" para **jogos e desempenho máximo** (risco médio/alto) — veja abaixo |
   | 🖱 | **Input lag** | Reduz a **latência de entrada** de **mouse, teclado e monitor** (a maioria **sem admin**) |
-  | 🎯 | **Por jogo** | **Detecta os jogos instalados** e otimiza o PC para o jogo escolhido, adaptado ao hardware |
+  | 🎯 | **Por jogo** | **Detecta os jogos instalados** (Steam, Epic, GOG, Ubisoft) e otimiza o PC para o jogo escolhido |
 
 - **🔄 Atualização automática**: verifica novas versões no GitHub e, no `.exe`,
   **baixa e se atualiza sozinho** (com a sua confirmação).
@@ -134,14 +134,14 @@ administrador**, e tudo é reversível em *Desfazer última alteração*.
 
 Uma **experiência única para cada PC**: o programa detecta o hardware
 **rapidamente** (≈ instantâneo), monta um **perfil da sua máquina** e usa isso
-para adaptar os ajustes. Depois, **detecta os jogos instalados** (Steam e Epic)
+para adaptar os ajustes. Depois, **detecta os jogos instalados** (Steam, Epic, GOG e Ubisoft Connect)
 e otimiza o PC para o jogo que você escolher.
 
 **Como funciona:**
 
 1. Detecta os componentes (CPU/GPU/RAM/disco, notebook × desktop) — leitura
    rápida, via registro/WMI (sem travar).
-2. Lista os **jogos instalados** que encontrar (ou você informa o `.exe`).
+2. Lista os **jogos instalados** que encontrar — Steam, Epic, GOG e Ubisoft (ou você informa o `.exe`).
 3. Você **escolhe um jogo** e o programa aplica um perfil sob medida:
    - **Para o jogo** (sem admin): força a **GPU dedicada** (ótimo em notebook
      híbrido) e **desativa as otimizações de tela cheia** do executável.
@@ -185,7 +185,7 @@ como plano B.
 ```text
 ╔════════════════════════════════════════════════════════════════════╗
 ║                                                                    ║
-║      ⚙  Otimizador PC  v1.5.0                                      ║
+║      ⚙  Otimizador PC  v1.6.0                                      ║
 ║                                                                    ║
 ║      Diagnóstico e ajustes seguros para Windows 10 e 11            ║
 ║                                                                    ║
@@ -196,7 +196,7 @@ como plano B.
 ║                                                                    ║
 ╚════════════════════════════════════════════════════════════════════╝
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  ⚙  Otimizador PC  v1.5.0                                          ┃
+┃  ⚙  Otimizador PC  v1.6.0                                          ┃
 ┃  Privilégio: ✔ administrador   │   🧪 Simulação: ○ desligado       ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
@@ -226,8 +226,10 @@ como plano B.
     ─── Ferramentas ───
    18)  🧪  Modo simulação (ligar)
    19)  ↩  Desfazer última alteração
-   20)  📜  Ver logs
-   21)  🔄  Verificar atualizações
+   20)  ⏮  Reverter TUDO (todas as alterações)
+   21)  ⚙  Preferências
+   22)  📜  Ver logs
+   23)  🔄  Verificar atualizações
     0)  🚪  Sair
 ```
 
@@ -292,7 +294,7 @@ otimizador-pc/
 ├── modulos/
 │   ├── diagnostico.py          # Detecção de hardware/software (leitura, rápida)
 │   ├── hardware.py             # Perfil de otimização por máquina (escalabilidade)
-│   ├── jogos.py                # Detecção de jogos instalados (Steam/Epic)
+│   ├── jogos.py                # Detecção de jogos (Steam/Epic/GOG/Ubisoft)
 │   ├── recomendacoes.py        # Análise do perfil + sugestões
 │   ├── seguranca.py            # Restauração, backups, logging, desfazer
 │   ├── interface.py            # Componentes da TUI (rich + questionary)
@@ -302,6 +304,7 @@ otimizador-pc/
 │   ├── desempenho.py           # 📊 Antes e depois (premium)
 │   ├── relatorio.py            # 📄 Relatório HTML (premium)
 │   ├── agendador.py            # 🗓️ Manutenção automática (premium)
+│   ├── preferencias.py         # ⚙ Preferências persistentes do usuário
 │   └── tweaks/
 │       ├── limpeza.py
 │       ├── inicializacao.py
