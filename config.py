@@ -20,7 +20,7 @@ from typing import Any
 # Identidade do programa
 # ---------------------------------------------------------------------------
 NOME_APP: str = "Otimizador PC"
-VERSAO_APP: str = "1.6.0"
+VERSAO_APP: str = "1.6.1"
 DESCRICAO_APP: str = "Diagnóstico e ajustes seguros para Windows 10 e 11"
 
 # Nome do executável distribuído (asset do release e alvo da auto-atualização).
@@ -37,6 +37,11 @@ GITHUB_OWNER: str = "Caionickpi"
 GITHUB_REPO: str = "otimizador-pc"
 URL_API_RELEASE_RECENTE: str = (
     f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest"
+)
+# Fallback: lista completa de releases (usada quando /releases/latest falha,
+# ex.: só há prereleases ou o endpoint devolve 404 por outro motivo).
+URL_API_LISTA_RELEASES: str = (
+    f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases?per_page=10"
 )
 URL_PAGINA_RELEASES: str = f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}/releases"
 

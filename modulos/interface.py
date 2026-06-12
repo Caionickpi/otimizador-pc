@@ -15,10 +15,51 @@ from __future__ import annotations
 import os
 import sys
 
-# Profundidade de cor MÁXIMA no menu (prompt_toolkit). Sem isto, o console do
-# Windows costuma cair para 16 cores e a interface fica "lavada". Precisa ser
-# definido ANTES de o prompt_toolkit detectar a saída — por isso fica no topo.
-os.environ.setdefault("PROMPT_TOOLKIT_COLOR_DEPTH", "DEPTH_24_BIT")
+
+def _habilitar_ansi_windows() -> bool:
+    """Liga o processamento ANSI/VT do console do Windows (stdout e stderr).
+
+    O console clássico (conhost) abre com o modo VT DESLIGADO. Sem ele, o rich
+    e o prompt_toolkit caem no caminho legado de 16 cores e a interface fica
+    "lavada"/amarelada — exatamente o sintoma visto no .exe. Ligamos o bit
+    ``ENABLE_VIRTUAL_TERMINAL_PROCESSING`` (suportado desde o Windows 10 1511)
+    e, com isso, toda a interface passa a renderizar em cor de 24 bits.
+
+    Returns:
+        ``True`` se o ANSI ficou ativo (ou se não estamos no Windows);
+        ``False`` se o console recusou — nesse caso usamos o fallback de
+        16 cores ANSI em vez de imprimir códigos de escape ilegíveis.
+    """
+    if not sys.platform.startswith("win"):
+        return True
+    try:
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
+        ativo = False
+        for identificador in (-11, -12):  # STD_OUTPUT_HANDLE, STD_ERROR_HANDLE
+            alca = kernel32.GetStdHandle(identificador)
+            modo = ctypes.c_uint32()
+            if not kernel32.GetConsoleMode(alca, ctypes.byref(modo)):
+                continue
+            if modo.value & ENABLE_VIRTUAL_TERMINAL_PROCESSING:
+                ativo = True
+            elif kernel32.SetConsoleMode(alca, modo.value | ENABLE_VIRTUAL_TERMINAL_PROCESSING):
+                ativo = True
+        return ativo
+    except Exception:  # noqa: BLE001 - cor nunca pode impedir o programa de abrir
+        return False
+
+
+_ANSI_ATIVO = _habilitar_ansi_windows()
+
+# Profundidade de cor do menu (prompt_toolkit): 24 bits quando o console aceita
+# ANSI; senão 4 bits (16 cores nomeadas), que o renderizador Win32 pinta com
+# fidelidade. Precisa ser definido ANTES de o prompt_toolkit detectar a saída.
+os.environ.setdefault(
+    "PROMPT_TOOLKIT_COLOR_DEPTH", "DEPTH_24_BIT" if _ANSI_ATIVO else "DEPTH_4_BIT"
+)
 
 from typing import Any, Iterable, Optional, Sequence
 
@@ -41,11 +82,15 @@ from rich.text import Text
 
 import config
 
-# Console único compartilhado. No Windows, forçamos cor de 24 bits (ANSI/VT) em
-# vez do caminho "legacy" de 16 cores — é o que faz as cores aparecerem vivas
-# em vez de "apagadas". O rich aproxima sozinho onde houver menos cores.
+# Console único compartilhado. No Windows com ANSI ativo (acima), forçamos cor
+# de 24 bits — é o que faz as cores aparecerem vivas em vez de "apagadas". Se o
+# console recusou o ANSI (Windows muito antigo), deixamos o rich usar a API
+# legada de 16 cores, que ainda colore (aproximando os tons) sem imprimir lixo.
 if sys.platform.startswith("win"):
-    console: Console = Console(color_system="truecolor", legacy_windows=False)
+    if _ANSI_ATIVO:
+        console: Console = Console(color_system="truecolor", legacy_windows=False)
+    else:
+        console = Console(color_system="windows", legacy_windows=True)
 else:
     console = Console()
 
@@ -80,20 +125,38 @@ def preparar_console_windows() -> None:
 # TODAS as linhas não selecionadas com a classe "text" e a linha atual com
 # "highlighted" — então damos cor às duas para o menu nunca ficar "morto".
 # As categorias (separadores) usam "separator".
-_ESTILO_QUESTIONARY = Style(
-    [
-        ("qmark", "fg:#58a6ff bold"),                   # símbolo da pergunta
-        ("question", "fg:#ffffff bold"),                # texto da pergunta
-        ("answer", "fg:#39d0d8 bold"),                  # resposta escolhida
-        ("pointer", "fg:#58a6ff bold"),                 # seta ▶ da linha atual
-        ("highlighted", "fg:#ffffff bg:#1f6feb bold"),  # barra de seleção (viva)
-        ("selected", "fg:#3fb950 bold"),                # itens marcados (checkbox)
-        ("separator", "fg:#d29922 bold"),               # rótulos de categoria
-        ("text", "fg:#c9d1d9"),                         # TODAS as demais linhas
-        ("instruction", "fg:#6e7681 italic"),           # dica "(use as setas...)"
-        ("disabled", "fg:#6e7681 italic"),
-    ]
-)
+if _ANSI_ATIVO:
+    _ESTILO_QUESTIONARY = Style(
+        [
+            ("qmark", "fg:#58a6ff bold"),                   # símbolo da pergunta
+            ("question", "fg:#ffffff bold"),                # texto da pergunta
+            ("answer", "fg:#39d0d8 bold"),                  # resposta escolhida
+            ("pointer", "fg:#58a6ff bold"),                 # seta ▶ da linha atual
+            ("highlighted", "fg:#ffffff bg:#1f6feb bold"),  # barra de seleção (viva)
+            ("selected", "fg:#3fb950 bold"),                # itens marcados (checkbox)
+            ("separator", "fg:#d29922 bold"),               # rótulos de categoria
+            ("text", "fg:#c9d1d9"),                         # TODAS as demais linhas
+            ("instruction", "fg:#6e7681 italic"),           # dica "(use as setas...)"
+            ("disabled", "fg:#6e7681 italic"),
+        ]
+    )
+else:
+    # Fallback de 16 cores: nomes ANSI mapeiam direto na paleta do console
+    # legado, sem aproximação de tons (que era o que deixava tudo "amarelado").
+    _ESTILO_QUESTIONARY = Style(
+        [
+            ("qmark", "fg:ansibrightblue bold"),
+            ("question", "fg:ansiwhite bold"),
+            ("answer", "fg:ansibrightcyan bold"),
+            ("pointer", "fg:ansibrightblue bold"),
+            ("highlighted", "fg:ansiwhite bg:ansiblue bold"),
+            ("selected", "fg:ansibrightgreen bold"),
+            ("separator", "fg:ansiyellow bold"),
+            ("text", "fg:ansiwhite"),
+            ("instruction", "fg:ansibrightblack italic"),
+            ("disabled", "fg:ansibrightblack italic"),
+        ]
+    )
 
 
 # ---------------------------------------------------------------------------

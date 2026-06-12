@@ -24,6 +24,7 @@ import logging
 import os
 import subprocess
 import sys
+import time
 import webbrowser
 from pathlib import Path
 from typing import Any, Optional
@@ -77,45 +78,101 @@ def _e_mais_nova(remota: str, atual: str) -> bool:
 # ---------------------------------------------------------------------------
 # Consulta ao GitHub
 # ---------------------------------------------------------------------------
-def obter_release_recente(timeout: int = _TIMEOUT_MANUAL) -> tuple[Optional[dict[str, Any]], str]:
-    """Busca o release mais recente na API pública do GitHub.
+def _consultar_api(url: str, timeout: int) -> tuple[Optional[Any], int, str]:
+    """Faz um GET na API do GitHub com 1 retentativa para falhas de rede.
 
     Returns:
-        ``(info, erro)``. Em sucesso, ``info`` é um dicionário com as chaves
-        ``versao``, ``tag``, ``nome``, ``notas``, ``url_pagina``,
-        ``url_download`` e ``tamanho``; ``erro`` é "". Em falha, ``info`` é
-        ``None`` e ``erro`` descreve o problema (sem internet, 404 etc.).
+        ``(json, status_http, erro)``. Em sucesso, ``json`` é o corpo
+        decodificado, ``status_http`` é 200 e ``erro`` é "". Em falha HTTP,
+        ``json`` é ``None`` e ``status_http`` traz o código (404, 403...).
+        Em falha de rede/SSL, ``status_http`` é 0 e ``erro`` traz o detalhe.
     """
     requisicao = urlrequest.Request(
-        config.URL_API_RELEASE_RECENTE,
+        url,
         headers={
             "User-Agent": _USER_AGENT,
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
         },
     )
-    try:
-        with urlrequest.urlopen(requisicao, timeout=timeout) as resposta:
-            dados = json.loads(resposta.read().decode("utf-8", errors="replace"))
-    except urlerror.HTTPError as exc:
-        if exc.code == 404:
-            return None, (
-                "Nenhum release público encontrado.\n"
-                "Causa mais comum: o repositório no GitHub está PRIVADO — a "
-                "verificação de atualização usa a API pública, então o dono "
-                "precisa torná-lo público (Settings → Change visibility) para "
-                "o auto-update funcionar."
+    ultimo_erro = ""
+    for tentativa in (1, 2):
+        try:
+            with urlrequest.urlopen(requisicao, timeout=timeout) as resposta:
+                corpo = resposta.read().decode("utf-8", errors="replace")
+            return json.loads(corpo), 200, ""
+        except urlerror.HTTPError as exc:
+            # Erro do servidor tem resposta definitiva: repetir não muda nada.
+            return None, exc.code, f"HTTP {exc.code}"
+        except (urlerror.URLError, TimeoutError, OSError) as exc:
+            ultimo_erro = str(getattr(exc, "reason", None) or exc)
+            if tentativa == 1:
+                time.sleep(1)  # respiro curto: redes Wi-Fi/4G falham em rajada
+        except (ValueError, json.JSONDecodeError) as exc:
+            return None, 0, f"resposta inesperada do servidor ({exc})"
+    return None, 0, ultimo_erro
+
+
+def _mensagem_falha(status: int, erro: str) -> str:
+    """Converte o resultado técnico de :func:`_consultar_api` em texto amigável."""
+    if status == 404:
+        return (
+            "Nenhum release público encontrado.\n"
+            "Causa mais comum: o repositório no GitHub está PRIVADO — a "
+            "verificação de atualização usa a API pública, então o dono "
+            "precisa torná-lo público (Settings → Change visibility) para "
+            "o auto-update funcionar."
+        )
+    if status in (403, 429):
+        return (
+            "O GitHub limitou as consultas deste endereço temporariamente "
+            "(rate limit). Tente novamente em alguns minutos."
+        )
+    if status:
+        return f"Falha ao consultar atualizações (HTTP {status})."
+    if "CERTIFICATE_VERIFY_FAILED" in erro or "SSL" in erro.upper():
+        return (
+            "A conexão segura com o GitHub falhou (verificação SSL).\n"
+            "Causa comum: antivírus ou proxy inspecionando a conexão. "
+            "Desative a 'inspeção HTTPS' do antivírus ou baixe manualmente."
+        )
+    return f"Sem conexão para verificar atualizações ({erro})."
+
+
+def obter_release_recente(timeout: int = _TIMEOUT_MANUAL) -> tuple[Optional[dict[str, Any]], str]:
+    """Busca o release mais recente na API pública do GitHub.
+
+    Tenta primeiro ``/releases/latest``; se ele responder 404 (ex.: só há
+    prereleases), cai para a lista completa de releases e usa o mais novo
+    estável. Toda falha fica registrada no log para diagnóstico.
+
+    Returns:
+        ``(info, erro)``. Em sucesso, ``info`` é um dicionário com as chaves
+        ``versao``, ``tag``, ``nome``, ``notas``, ``url_pagina``,
+        ``url_download``, ``tamanho`` e ``sha256``; ``erro`` é "". Em falha,
+        ``info`` é ``None`` e ``erro`` descreve o problema.
+    """
+    dados, status, erro = _consultar_api(config.URL_API_RELEASE_RECENTE, timeout)
+
+    if dados is None and status == 404:
+        # Fallback: /releases/latest não acha nada quando só há prereleases.
+        lista, status2, erro2 = _consultar_api(config.URL_API_LISTA_RELEASES, timeout)
+        if isinstance(lista, list) and lista:
+            estaveis = [r for r in lista if not r.get("draft") and not r.get("prerelease")]
+            dados = (estaveis or lista)[0]
+            status, erro = 200, ""
+        else:
+            seguranca.registrar(
+                f"[atualizacao] fallback /releases também falhou: status={status2} erro={erro2}",
+                logging.WARNING,
             )
-        if exc.code == 403:
-            return None, (
-                "O GitHub limitou as consultas deste endereço temporariamente "
-                "(rate limit). Tente novamente em alguns minutos."
-            )
-        return None, f"Falha ao consultar atualizações (HTTP {exc.code})."
-    except (urlerror.URLError, TimeoutError, OSError) as exc:
-        return None, f"Sem conexão para verificar atualizações ({exc})."
-    except (ValueError, json.JSONDecodeError):
-        return None, "Resposta inesperada do servidor de atualizações."
+
+    if dados is None or not isinstance(dados, dict):
+        mensagem = _mensagem_falha(status, erro)
+        seguranca.registrar(
+            f"[atualizacao] consulta falhou: status={status} erro={erro}", logging.WARNING
+        )
+        return None, mensagem
 
     tag = str(dados.get("tag_name", "")).strip()
     # Localiza o asset do executável pelo nome (robusto a maiúsc./minúsc.).
@@ -325,6 +382,8 @@ def verificar(estado: config.EstadoApp, *, no_inicio: bool = False) -> None:
             seguranca.registrar(f"[atualizacao] checagem no início: {erro}", logging.INFO)
             return
         interface.aviso(f"{erro}\n\nVeja as versões disponíveis em:\n{config.URL_PAGINA_RELEASES}")
+        if interface.confirmar("Abrir a página de downloads no navegador?", padrao=True):
+            _abrir_pagina(config.URL_PAGINA_RELEASES)
         return
 
     if not _e_mais_nova(info["versao"], config.VERSAO_APP):
