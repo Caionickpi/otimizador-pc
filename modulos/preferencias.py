@@ -77,7 +77,9 @@ def menu(estado: config.EstadoApp) -> None:
         opcoes: list[tuple[str, Any]] = []
         for chave in PADROES:
             ligado = bool(obter(chave))
-            estado_txt = f"[{config.COR_OK}]● ligado[/]" if ligado else f"[{config.COR_DIM}]○ desligado[/]"
+            # Texto puro: o questionary não interpreta markup do rich — se
+            # colocássemos [verde]...[/], apareceria o código literal na tela.
+            estado_txt = "● ligado" if ligado else "○ desligado"
             opcoes.append((f"{_ROTULOS.get(chave, chave)}  —  {estado_txt}", chave))
         opcoes.append(("↩  Voltar", "voltar"))
 
