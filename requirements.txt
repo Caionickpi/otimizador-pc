@@ -4,7 +4,13 @@
 # Observação: este programa é destinado ao Windows 10/11. Os pacotes wmi e
 # pywin32 só instalam/funcionam no Windows.
 
-# Interface de terminal (TUI)
+# Interface gráfica (janela) — modo PADRÃO a partir da v2.0.
+# O PySide6 (Qt) é a janela premium do programa. A wheel é "abi3" (uma só
+# cobre Python 3.9–3.13), então o GitHub Actions a instala sem compilar nada.
+PySide6==6.8.1.1
+
+# Interface de terminal (TUI) — fallback acessível com a flag --cli.
+# O rich também alimenta a saída colorida exibida DENTRO da janela.
 rich==13.7.1
 questionary==2.0.1
 
@@ -17,5 +23,7 @@ psutil==5.9.8
 WMI==1.5.1 ; sys_platform == "win32"
 pywin32==306 ; sys_platform == "win32"
 
-# Empacotamento do executável (.exe) — opcional, só para gerar a distribuição
-pyinstaller==6.6.0 ; sys_platform == "win32"
+# Empacotamento do executável (.exe) — opcional, só para gerar a distribuição.
+# Versão alinhada ao PySide6 6.8 (os hooks do PyInstaller já reconhecem o Qt 6.8
+# e empacotam os plugins de plataforma necessários para a janela abrir).
+pyinstaller==6.11.1 ; sys_platform == "win32"
