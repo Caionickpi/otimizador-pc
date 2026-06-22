@@ -1,28 +1,35 @@
-"""Janela principal do Otimizador PC (PySide6).
+"""Janela principal do Otimizador PC (PySide6) — sem moldura, premium.
 
 Estrutura visual:
-    ┌───────────┬──────────────────────────────────────────┐
-    │  barra    │  cabeçalho (título + simulação + admin)   │
-    │  lateral  ├──────────────────────────────────────────┤
-    │  (nav)    │  conteúdo: Painel ou página de Operação   │
-    │           ├──────────────────────────────────────────┤
-    │           │  barra de status (progresso)              │
-    └───────────┴──────────────────────────────────────────┘
+    ┌──────────────────────────────────────────────────────────┐
+    │  barra de título própria (logo · nome · min/max/fechar)    │
+    ├───────────┬──────────────────────────────────────────────┤
+    │  barra    │  cabeçalho (título + simulação + admin)       │
+    │  lateral  ├──────────────────────────────────────────────┤
+    │  (nav)    │  conteúdo: Painel ou página de Operação       │
+    ├───────────┴──────────────────────────────────────────────┤
+    │  rodapé (status + progresso + alça de redimensionar)      │
+    └──────────────────────────────────────────────────────────┘
 
-A barra lateral espelha o menu da TUI. O "Painel" é nativo (anel de saúde +
-indicadores). As demais opções abrem a página de "Operação", que executa o
-fluxo correspondente do backend numa thread, mostrando a saída colorida do
-``rich`` e abrindo diálogos nativos quando o backend pede uma escolha.
+A janela é *frameless* com cantos arredondados (visual de produto pago); o
+arraste/maximização usam as APIs nativas (preserva o "snap" do Windows). A
+barra lateral espelha o menu da TUI; o "Painel" é nativo (anel de saúde
+animado + indicadores). As demais opções abrem a página de "Operação", que
+executa o fluxo do backend numa thread, mostrando a saída colorida do ``rich``
+e abrindo diálogos nativos quando o backend pede uma escolha.
 """
 
 from __future__ import annotations
 
 from typing import Any, Callable, Optional
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont, QTextCursor
+from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt
+from PySide6.QtGui import QPixmap, QTextCursor
 from PySide6.QtWidgets import (
+    QApplication,
     QButtonGroup,
+    QFrame,
+    QGraphicsOpacityEffect,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -30,8 +37,8 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QScrollArea,
+    QSizeGrip,
     QStackedWidget,
-    QStatusBar,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -41,8 +48,8 @@ import config
 import main as app_principal
 from gui import tema
 from gui.nucleo import Ponte, Trabalhador
-from gui.widgets import AnelSaude, Cartao, EstatChip
-from modulos import diagnostico, elevacao, hardware, saude
+from gui.widgets import AnelSaude, BarraTitulo, Cartao, EstatChip, ToggleSwitch
+from modulos import elevacao, saude
 
 # Estrutura do menu: (seção, [(rótulo, chave, subtítulo)])
 _SECOES: list[tuple[str, list[tuple[str, str, str]]]] = [
@@ -87,8 +94,12 @@ class JanelaPrincipal(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle(f"{config.NOME_APP}  ·  v{config.VERSAO_APP}")
-        self.resize(1080, 720)
-        self.setMinimumSize(940, 620)
+        self.resize(1140, 760)
+        self.setMinimumSize(960, 640)
+
+        # Janela sem moldura + fundo translúcido (cantos arredondados suaves).
+        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.FramelessWindowHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
 
         self.estado = config.EstadoApp()
         self.estado.eh_admin = elevacao.eh_administrador()
@@ -97,59 +108,95 @@ class JanelaPrincipal(QMainWindow):
         self._alvos: dict[str, Callable[[], Any]] = self._montar_alvos()
         self._subtitulos: dict[str, str] = {}
         self._chave_atual = "painel"
+        self._pix = self._carregar_pixmap()
+        self._ja_apareceu = False
+        self._maximizado = False
+        self._geo_normal = None
+        self._anim_pag: Optional[QPropertyAnimation] = None
+        self._anim_janela: Optional[QPropertyAnimation] = None
 
         self._montar_ui()
         self.ponte.sig_saida.connect(self._anexar_console)
         self.ponte.sig_status.connect(self._atualizar_status)
-
-        # Checagem silenciosa de atualização ao abrir (respeita a preferência).
         self._verificar_update_inicial()
 
     # ------------------------------------------------------------------ UI
-    def _montar_ui(self) -> None:
-        raiz = QWidget()
-        raiz.setObjectName("raiz")
-        h = QHBoxLayout(raiz)
-        h.setContentsMargins(0, 0, 0, 0)
-        h.setSpacing(0)
-        h.addWidget(self._montar_barra_lateral())
-        h.addWidget(self._montar_area_principal(), 1)
-        self.setCentralWidget(raiz)
+    def _carregar_pixmap(self) -> QPixmap:
+        try:
+            caminho = config.caminho_recurso("dados/icone.ico")
+            if caminho.exists():
+                return QPixmap(str(caminho))
+        except Exception:  # noqa: BLE001
+            pass
+        return QPixmap()
 
-        barra = QStatusBar()
-        self.setStatusBar(barra)
-        self._status_texto = QLabel("Pronto.")
-        self._status_barra = QProgressBar()
-        self._status_barra.setMaximumWidth(220)
-        self._status_barra.setVisible(False)
-        barra.addWidget(self._status_texto, 1)
-        barra.addPermanentWidget(self._status_barra)
+    def _montar_ui(self) -> None:
+        self._frame = QFrame()
+        self._frame.setObjectName("frameJanela")
+        fl = QVBoxLayout(self._frame)
+        fl.setContentsMargins(0, 0, 0, 0)
+        fl.setSpacing(0)
+
+        # Barra de título própria.
+        self._barra_titulo = BarraTitulo(self, config.NOME_APP, self._pix)
+        self._barra_titulo.btn_min.clicked.connect(self.showMinimized)
+        self._barra_titulo.btn_max.clicked.connect(self.alternar_maximizar)
+        self._barra_titulo.btn_fechar.clicked.connect(self.close)
+        fl.addWidget(self._barra_titulo)
+
+        # Corpo: barra lateral + área principal.
+        corpo = QWidget()
+        ch = QHBoxLayout(corpo)
+        ch.setContentsMargins(0, 0, 0, 0)
+        ch.setSpacing(0)
+        ch.addWidget(self._montar_barra_lateral())
+        ch.addWidget(self._montar_area_principal(), 1)
+        fl.addWidget(corpo, 1)
+
+        # Rodapé.
+        fl.addWidget(self._montar_rodape())
+
+        self.setCentralWidget(self._frame)
 
     def _montar_barra_lateral(self) -> QWidget:
         lateral = QWidget()
         lateral.setObjectName("barraLateral")
-        lateral.setFixedWidth(248)
+        lateral.setFixedWidth(252)
         v = QVBoxLayout(lateral)
-        v.setContentsMargins(0, 18, 0, 12)
+        v.setContentsMargins(0, 16, 0, 12)
         v.setSpacing(2)
 
-        marca = QLabel(f"⚙  {config.NOME_APP}")
+        # Marca: ícone + nome.
+        topo = QHBoxLayout()
+        topo.setContentsMargins(16, 0, 16, 0)
+        topo.setSpacing(10)
+        if not self._pix.isNull():
+            logo = QLabel()
+            logo.setPixmap(self._pix.scaled(28, 28, Qt.AspectRatioMode.KeepAspectRatio,
+                                            Qt.TransformationMode.SmoothTransformation))
+            topo.addWidget(logo)
+        col = QVBoxLayout()
+        col.setSpacing(0)
+        marca = QLabel(config.NOME_APP)
         marca.setObjectName("marca")
-        marca.setContentsMargins(16, 0, 16, 0)
         versao = QLabel(f"v{config.VERSAO_APP}  ·  Windows 10/11")
         versao.setObjectName("marcaVersao")
-        versao.setContentsMargins(16, 0, 16, 8)
-        v.addWidget(marca)
-        v.addWidget(versao)
+        col.addWidget(marca)
+        col.addWidget(versao)
+        topo.addLayout(col)
+        topo.addStretch(1)
+        v.addLayout(topo)
+        v.addSpacing(6)
 
-        # Navegação rolável (cabe em telas menores).
+        # Navegação rolável.
         area = QScrollArea()
         area.setWidgetResizable(True)
         area.setFrameShape(QScrollArea.Shape.NoFrame)
+        area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         interno = QWidget()
         nav = QVBoxLayout(interno)
-        nav.setContentsMargins(0, 4, 0, 4)
-        nav.setSpacing(2)
+        nav.setContentsMargins(0, 2, 0, 4)
+        nav.setSpacing(1)
 
         self._grupo_nav = QButtonGroup(self)
         self._grupo_nav.setExclusive(True)
@@ -177,11 +224,12 @@ class JanelaPrincipal(QMainWindow):
     def _montar_area_principal(self) -> QWidget:
         area = QWidget()
         v = QVBoxLayout(area)
-        v.setContentsMargins(24, 20, 24, 16)
+        v.setContentsMargins(26, 20, 26, 14)
         v.setSpacing(16)
 
         # Cabeçalho persistente.
         cab = QHBoxLayout()
+        cab.setSpacing(12)
         col = QVBoxLayout()
         col.setSpacing(2)
         self._titulo = QLabel("Painel")
@@ -192,19 +240,26 @@ class JanelaPrincipal(QMainWindow):
         col.addWidget(self._subtitulo)
         cab.addLayout(col, 1)
 
+        # Interruptor de simulação.
+        caixa_sim = QWidget()
+        ls = QHBoxLayout(caixa_sim)
+        ls.setContentsMargins(0, 0, 0, 0)
+        ls.setSpacing(8)
+        rot_sim = QLabel("🧪  Simulação")
+        rot_sim.setObjectName("rotuloSim")
+        self._toggle_sim = ToggleSwitch()
+        self._toggle_sim.setToolTip("Modo simulação: mostra o que seria feito, sem alterar nada.")
+        self._toggle_sim.toggled.connect(self._alternar_simulacao)
+        ls.addWidget(rot_sim)
+        ls.addWidget(self._toggle_sim)
+        cab.addWidget(caixa_sim, 0, Qt.AlignmentFlag.AlignVCenter)
+
         self._chip_admin = QPushButton()
-        self._chip_admin.setObjectName("nav")
-        self._chip_admin.setCheckable(False)
+        self._chip_admin.setObjectName("pill")
         self._chip_admin.setCursor(Qt.CursorShape.PointingHandCursor)
         self._atualizar_chip_admin()
         self._chip_admin.clicked.connect(self._reabrir_admin)
-        cab.addWidget(self._chip_admin, 0, Qt.AlignmentFlag.AlignTop)
-
-        self._botao_sim = QPushButton("🧪  Simulação: desligada")
-        self._botao_sim.setCheckable(True)
-        self._botao_sim.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._botao_sim.toggled.connect(self._alternar_simulacao)
-        cab.addWidget(self._botao_sim, 0, Qt.AlignmentFlag.AlignTop)
+        cab.addWidget(self._chip_admin, 0, Qt.AlignmentFlag.AlignVCenter)
         v.addLayout(cab)
 
         # Pilha: 0 = Painel, 1 = Operação.
@@ -230,6 +285,7 @@ class JanelaPrincipal(QMainWindow):
         t.setObjectName("cartaoTitulo")
         ls.addWidget(t)
         linha_anel = QHBoxLayout()
+        linha_anel.setSpacing(14)
         self._anel = AnelSaude()
         linha_anel.addWidget(self._anel)
         col_info = QVBoxLayout()
@@ -237,11 +293,12 @@ class JanelaPrincipal(QMainWindow):
         self._saude_resumo = QLabel("Rode um diagnóstico para calcular a nota do seu PC.")
         self._saude_resumo.setObjectName("cartaoDesc")
         self._saude_resumo.setWordWrap(True)
+        self._saude_resumo.setAlignment(Qt.AlignmentFlag.AlignTop)
         col_info.addWidget(self._saude_resumo)
         col_info.addStretch(1)
         linha_anel.addLayout(col_info, 1)
         ls.addLayout(linha_anel)
-        topo.addWidget(cartao_saude, 1)
+        topo.addWidget(cartao_saude, 3)
 
         cartao_acoes = Cartao()
         la = cartao_acoes.layout_conteudo()
@@ -262,17 +319,17 @@ class JanelaPrincipal(QMainWindow):
             b.clicked.connect(lambda _c=False, k=chave: self._navegar(k, executar=True))
             la.addWidget(b)
         la.addStretch(1)
-        topo.addWidget(cartao_acoes, 1)
+        topo.addWidget(cartao_acoes, 2)
         v.addLayout(topo)
 
         # Indicadores (KPIs) do hardware.
         grade = QGridLayout()
         grade.setSpacing(12)
         self._kpis = {
-            "ram": EstatChip("Memória RAM"),
-            "disco": EstatChip("Espaço livre (pior disco)"),
-            "ssd": EstatChip("Disco do sistema"),
-            "inicio": EstatChip("Programas na inicialização"),
+            "ram": EstatChip("Memória RAM", "🧠"),
+            "disco": EstatChip("Espaço livre (pior disco)", "💽"),
+            "ssd": EstatChip("Disco do sistema", "⚡"),
+            "inicio": EstatChip("Programas na inicialização", "🚀"),
         }
         for i, chip in enumerate(self._kpis.values()):
             grade.addWidget(chip, 0, i)
@@ -298,15 +355,96 @@ class JanelaPrincipal(QMainWindow):
         linha.addWidget(self._botao_exec, 0, Qt.AlignmentFlag.AlignTop)
         v.addLayout(linha)
 
+        titulo_console = QLabel("ATIVIDADE")
+        titulo_console.setObjectName("consoleTitulo")
+        v.addWidget(titulo_console)
+
         self._console = QTextEdit()
         self._console.setObjectName("console")
         self._console.setReadOnly(True)
         v.addWidget(self._console, 1)
         return pag
 
+    def _montar_rodape(self) -> QWidget:
+        rod = QWidget()
+        rod.setObjectName("rodape")
+        rod.setFixedHeight(34)
+        rl = QHBoxLayout(rod)
+        rl.setContentsMargins(16, 0, 6, 0)
+        rl.setSpacing(10)
+        self._status_texto = QLabel("Pronto.")
+        self._status_texto.setObjectName("statusTexto")
+        self._status_barra = QProgressBar()
+        self._status_barra.setMaximumWidth(220)
+        self._status_barra.setVisible(False)
+        rl.addWidget(self._status_texto, 1)
+        rl.addWidget(self._status_barra)
+        grip = QSizeGrip(rod)
+        rl.addWidget(grip, 0, Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignRight)
+        return rod
+
+    # ------------------------------------------------------- janela (frameless)
+    def alternar_maximizar(self) -> None:
+        """Maximiza/restaura usando a área DISPONÍVEL (nunca cobre a taskbar)."""
+        if self._maximizado:
+            self._maximizado = False
+            if self._geo_normal is not None:
+                self.setGeometry(self._geo_normal)
+            self._aplicar_radius(False)
+            self._barra_titulo.btn_max.setText("☐")
+        else:
+            self._geo_normal = self.geometry()
+            tela = self.screen() or QApplication.primaryScreen()
+            if tela is not None:
+                self.setGeometry(tela.availableGeometry())
+            self._maximizado = True
+            self._aplicar_radius(True)
+            self._barra_titulo.btn_max.setText("❐")
+
+    def _aplicar_radius(self, maximizado: bool) -> None:
+        self._frame.setProperty("maximizado", "true" if maximizado else "false")
+        self._frame.style().unpolish(self._frame)
+        self._frame.style().polish(self._frame)
+
+    def showEvent(self, evento) -> None:  # noqa: N802
+        super().showEvent(evento)
+        if not self._ja_apareceu:
+            self._ja_apareceu = True
+            self._fade_janela()
+            self._atualizar_painel()  # mostra "–" formatado já na abertura
+
+    def _fade_janela(self) -> None:
+        """Fade-in suave da janela ao abrir."""
+        try:
+            self.setWindowOpacity(0.0)
+            a = QPropertyAnimation(self, b"windowOpacity", self)
+            a.setDuration(280)
+            a.setStartValue(0.0)
+            a.setEndValue(1.0)
+            a.setEasingCurve(QEasingCurve.Type.OutCubic)
+            a.start()
+            self._anim_janela = a
+        except Exception:  # noqa: BLE001
+            self.setWindowOpacity(1.0)
+
+    def _fade_pagina(self) -> None:
+        """Transição de fade ao trocar de página (removida ao terminar)."""
+        try:
+            efeito = QGraphicsOpacityEffect(self._pilha)
+            self._pilha.setGraphicsEffect(efeito)
+            a = QPropertyAnimation(efeito, b"opacity", self)
+            a.setDuration(200)
+            a.setStartValue(0.0)
+            a.setEndValue(1.0)
+            a.setEasingCurve(QEasingCurve.Type.OutCubic)
+            a.finished.connect(lambda: self._pilha.setGraphicsEffect(None))
+            a.start()
+            self._anim_pag = a
+        except Exception:  # noqa: BLE001
+            self._pilha.setGraphicsEffect(None)
+
     # ------------------------------------------------------- navegação
     def _navegar(self, chave: str, executar: bool = False) -> None:
-        # Mantém o botão da barra lateral em sincronia (inclusive vindo do Painel).
         for b in self._grupo_nav.buttons():
             b.setChecked(b.property("chave") == chave)
 
@@ -316,9 +454,11 @@ class JanelaPrincipal(QMainWindow):
 
         if chave == "painel":
             self._pilha.setCurrentIndex(0)
+            self._fade_pagina()
             return
 
         self._pilha.setCurrentIndex(1)
+        self._fade_pagina()
         self._op_desc.setText(self._subtitulos.get(chave, ""))
         self._console.clear()
         self._console.setHtml(
@@ -332,7 +472,6 @@ class JanelaPrincipal(QMainWindow):
         for _secao, itens in _SECOES:
             for rotulo, c, _sub in itens:
                 if c == chave:
-                    # Remove o emoji inicial para o título do cabeçalho.
                     return rotulo.split("  ", 1)[-1].strip()
         return chave
 
@@ -357,7 +496,7 @@ class JanelaPrincipal(QMainWindow):
             self._botao_exec.setText("▶  Executar")
             return False
         self._status_barra.setVisible(True)
-        self._status_barra.setRange(0, 0)  # indeterminado até a 1ª atualização
+        self._status_barra.setRange(0, 0)
         self._trabalhador = Trabalhador(self.ponte, alvo, rotulo)
         self._trabalhador.sig_fim.connect(lambda _r, k=chave: self._tarefa_terminou(k))
         self._trabalhador.start()
@@ -368,7 +507,6 @@ class JanelaPrincipal(QMainWindow):
         self._botao_exec.setText("▶  Executar novamente")
         self._status_barra.setVisible(False)
         self._status_texto.setText("Concluído.")
-        # Diagnóstico atualiza o Painel automaticamente.
         if chave in ("diagnostico", "recomendacoes", "limpeza", "perfis") and self.estado.diagnostico_pronto():
             self._atualizar_painel()
 
@@ -417,10 +555,8 @@ class JanelaPrincipal(QMainWindow):
         self._anel.definir(res["pontuacao"], res["nota"])
         problemas = res.get("problemas", [])
         if problemas:
-            itens = "<br>".join(f"• {p['fator']}" for p in problemas[:4])
-            self._saude_resumo.setText(
-                f"<b>O que está custando pontos:</b><br>{itens}"
-            )
+            itens = "<br>".join(f"•&nbsp; {p['fator']}" for p in problemas[:4])
+            self._saude_resumo.setText(f"<b>O que está custando pontos:</b><br>{itens}")
         else:
             self._saude_resumo.setText("Seu PC está em ótima forma! 🎉")
         self._atualizar_kpis(perfil)
@@ -457,8 +593,8 @@ class JanelaPrincipal(QMainWindow):
 
     def _alternar_simulacao(self, ligado: bool) -> None:
         self.estado.simulacao = ligado
-        self._botao_sim.setText(
-            "🧪  Simulação: LIGADA" if ligado else "🧪  Simulação: desligada"
+        self._status_texto.setText(
+            "Modo simulação LIGADO — nada será alterado de verdade." if ligado else "Pronto."
         )
 
     # ------------------------------------------------------- console/status
@@ -491,14 +627,12 @@ class JanelaPrincipal(QMainWindow):
                 return
         except Exception:  # noqa: BLE001
             return
-        # Checagem silenciosa (no_inicio=True): só aparece algo se houver versão
-        # nova. Roda no worker sem trocar a página atual (Painel).
         self._iniciar_worker(
             lambda: atualizacao.verificar(self.estado, no_inicio=True),
             "Verificar atualizações",
         )
 
-    def closeEvent(self, evento) -> None:  # noqa: N802 - assinatura do Qt
+    def closeEvent(self, evento) -> None:  # noqa: N802
         if self._trabalhador is not None and self._trabalhador.isRunning():
             self._trabalhador.wait(2000)
         super().closeEvent(evento)

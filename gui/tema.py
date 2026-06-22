@@ -1,9 +1,9 @@
 """Tema visual premium (paleta + folha de estilo QSS) da janela.
 
-A paleta deriva das cores já usadas na TUI (definidas em :mod:`config`), para
-que a marca do programa seja consistente entre o modo janela e o modo terminal.
-O estilo é escuro, com cantos arredondados, realces em ciano/azul e tipografia
-do sistema — pensado para passar a sensação de produto pago.
+A paleta deriva das cores da marca (definidas em :mod:`config`) para manter a
+identidade entre o modo janela e o modo terminal. O estilo é escuro, com
+superfícies em camadas, realces em ciano/azul, gradientes sutis e cantos
+arredondados — pensado para passar a sensação de produto pago e exclusivo.
 """
 
 from __future__ import annotations
@@ -11,17 +11,18 @@ from __future__ import annotations
 import config
 
 # ---------------------------------------------------------------------------
-# Paleta (escura, viva e profissional). Fundo no estilo "GitHub dark".
+# Paleta — fundo profundo (navy-black) com superfícies em camadas.
 # ---------------------------------------------------------------------------
-FUNDO = "#0b0f14"          # fundo da janela (quase preto azulado)
-FUNDO_BARRA = "#0e1420"    # barra lateral
-PAINEL = "#161b22"         # cartões / superfícies
-PAINEL_ALTO = "#1c2230"    # superfícies em destaque / hover
-BORDA = "#283041"          # bordas sutis
-BORDA_FORTE = "#3a4150"     # bordas em destaque / hover
+FUNDO = "#0a0e15"          # fundo da janela (quase preto azulado)
+FUNDO_BARRA = "#0c111b"    # barra lateral / título
+PAINEL = "#141a24"         # cartões / superfícies
+PAINEL_ALTO = "#1b2230"    # superfícies em destaque / hover
+BORDA = "#232c3b"          # bordas sutis
+BORDA_FORTE = "#36415a"    # bordas em destaque / hover
+TRILHO = "#1b2230"         # trilho do anel de saúde
 
-TEXTO = config.COR_NEUTRA          # #c9d1d9
-TEXTO_FRACO = config.COR_DIM       # #6e7681
+TEXTO = "#d7dee8"          # texto comum (claro, alto contraste)
+TEXTO_FRACO = "#7d8a99"    # texto apagado / dicas
 TEXTO_FORTE = "#ffffff"
 
 OK = config.COR_OK                 # #3fb950 verde
@@ -29,7 +30,7 @@ AVISO = config.COR_AVISO           # #d29922 âmbar
 ERRO = config.COR_ERRO             # #f85149 vermelho
 INFO = config.COR_INFO             # #58a6ff azul
 ACENTO = config.COR_ACENTO         # #39d0d8 ciano
-ACENTO2 = "#1f6feb"                # azul forte (seleção)
+ACENTO2 = "#2f6bff"                # azul forte (seleção / primário)
 
 
 def cor_por_pontuacao(p: int) -> str:
@@ -48,14 +49,51 @@ def folha_estilo() -> str:
     """Retorna o QSS completo da aplicação."""
     return f"""
     * {{
-        font-family: 'Segoe UI', 'Inter', 'Ubuntu', 'Helvetica Neue', sans-serif;
+        font-family: 'Segoe UI Variable Display', 'Segoe UI', 'Inter',
+                     'Ubuntu', 'Helvetica Neue', sans-serif;
         font-size: 14px;
         color: {TEXTO};
         outline: 0;
     }}
 
-    QWidget#raiz {{
+    /* Moldura externa da janela sem bordas (cantos arredondados). */
+    QFrame#frameJanela {{
         background-color: {FUNDO};
+        border: 1px solid {BORDA};
+        border-radius: 14px;
+    }}
+    QFrame#frameJanela[maximizado="true"] {{
+        border-radius: 0px;
+        border: 0px;
+    }}
+
+    /* ---------------- Barra de título ---------------- */
+    QWidget#barraTitulo {{
+        background-color: {FUNDO_BARRA};
+        border-top-left-radius: 14px;
+        border-top-right-radius: 14px;
+        border-bottom: 1px solid {BORDA};
+    }}
+    QLabel#tituloJanela {{
+        color: {TEXTO};
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+    }}
+    QPushButton#btnJanela, QPushButton#btnFechar {{
+        background: transparent;
+        border: none;
+        border-radius: 7px;
+        color: {TEXTO_FRACO};
+        font-size: 14px;
+    }}
+    QPushButton#btnJanela:hover {{
+        background-color: {PAINEL_ALTO};
+        color: {TEXTO_FORTE};
+    }}
+    QPushButton#btnFechar:hover {{
+        background-color: {ERRO};
+        color: #ffffff;
     }}
 
     /* ---------------- Barra lateral ---------------- */
@@ -65,53 +103,59 @@ def folha_estilo() -> str:
     }}
     QLabel#marca {{
         color: {TEXTO_FORTE};
-        font-size: 18px;
+        font-size: 17px;
         font-weight: 800;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.3px;
     }}
     QLabel#marcaVersao {{
         color: {TEXTO_FRACO};
-        font-size: 12px;
+        font-size: 11px;
     }}
     QLabel#tituloSecao {{
-        color: {AVISO};
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 1.2px;
-        padding: 4px 14px 2px 14px;
+        color: {TEXTO_FRACO};
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 1.6px;
+        padding: 10px 16px 4px 16px;
     }}
 
-    /* Itens de navegação (botões "planos") */
+    /* Itens de navegação */
     QPushButton#nav {{
         background-color: transparent;
         border: none;
         border-radius: 10px;
         padding: 10px 14px;
-        margin: 1px 8px;
+        margin: 1px 10px;
         text-align: left;
         color: {TEXTO};
-        font-size: 14px;
+        font-size: 13.5px;
     }}
     QPushButton#nav:hover {{
         background-color: {PAINEL_ALTO};
         color: {TEXTO_FORTE};
     }}
     QPushButton#nav:checked {{
-        background-color: {PAINEL_ALTO};
+        background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+            stop:0 rgba(47,107,255,0.22), stop:1 rgba(57,208,216,0.06));
         color: {TEXTO_FORTE};
-        border-left: 3px solid {ACENTO};
         font-weight: 700;
     }}
 
-    /* ---------------- Cabeçalho ---------------- */
+    /* ---------------- Cabeçalho da página ---------------- */
     QLabel#tituloPagina {{
         color: {TEXTO_FORTE};
-        font-size: 22px;
+        font-size: 23px;
         font-weight: 800;
+        letter-spacing: 0.2px;
     }}
     QLabel#subtituloPagina {{
         color: {TEXTO_FRACO};
         font-size: 13px;
+    }}
+    QLabel#rotuloSim {{
+        color: {TEXTO_FRACO};
+        font-size: 12px;
+        font-weight: 600;
     }}
 
     /* ---------------- Cartões ---------------- */
@@ -120,18 +164,26 @@ def folha_estilo() -> str:
         border: 1px solid {BORDA};
         border-radius: 16px;
     }}
-    QFrame#cartao:hover {{
-        border: 1px solid {BORDA_FORTE};
-    }}
+    QFrame#cartao:hover {{ border: 1px solid {BORDA_FORTE}; }}
     QLabel#cartaoTitulo {{
         color: {TEXTO_FORTE};
         font-size: 15px;
         font-weight: 700;
     }}
-    QLabel#cartaoDesc {{
-        color: {TEXTO_FRACO};
-        font-size: 13px;
+    QLabel#cartaoDesc {{ color: {TEXTO_FRACO}; font-size: 13px; }}
+
+    /* KPIs (indicadores) */
+    QFrame#kpi {{
+        background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+            stop:0 {PAINEL_ALTO}, stop:1 {PAINEL});
+        border: 1px solid {BORDA};
+        border-radius: 14px;
     }}
+    QFrame#kpi:hover {{ border: 1px solid {ACENTO}; }}
+    QLabel#kpiIcone {{ font-size: 18px; }}
+    QLabel#kpiValor {{ color: {TEXTO_FORTE}; font-size: 21px; font-weight: 800; }}
+    QLabel#kpiRotulo {{ color: {TEXTO_FRACO}; font-size: 12px; }}
+
     QLabel#chip {{
         background-color: {PAINEL_ALTO};
         border: 1px solid {BORDA};
@@ -146,114 +198,113 @@ def folha_estilo() -> str:
         background-color: {PAINEL_ALTO};
         border: 1px solid {BORDA_FORTE};
         border-radius: 10px;
-        padding: 9px 16px;
+        padding: 10px 16px;
         color: {TEXTO_FORTE};
         font-weight: 600;
     }}
-    QPushButton:hover {{
-        background-color: #232b3a;
-        border: 1px solid {ACENTO};
-    }}
+    QPushButton:hover {{ background-color: #232c3e; border: 1px solid {ACENTO}; }}
+    QPushButton:pressed {{ background-color: #1a2130; }}
     QPushButton:disabled {{
         color: {TEXTO_FRACO};
         background-color: {PAINEL};
         border: 1px solid {BORDA};
     }}
     QPushButton#primario {{
-        background-color: {ACENTO2};
-        border: 1px solid {ACENTO2};
+        background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+            stop:0 {ACENTO2}, stop:1 #1f9bd1);
+        border: none;
         color: #ffffff;
+        font-weight: 700;
     }}
     QPushButton#primario:hover {{
-        background-color: #2a7bff;
-        border: 1px solid {ACENTO};
+        background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+            stop:0 #3f7bff, stop:1 {ACENTO});
     }}
-    QPushButton#perigo:hover {{
-        border: 1px solid {ERRO};
-        color: {ERRO};
+    QPushButton#primario:disabled {{
+        background: {PAINEL}; color: {TEXTO_FRACO};
     }}
+    QPushButton#pill {{
+        background-color: {PAINEL_ALTO};
+        border: 1px solid {BORDA};
+        border-radius: 14px;
+        padding: 7px 14px;
+        font-size: 12.5px;
+        font-weight: 600;
+    }}
+    QPushButton#pill:hover {{ border: 1px solid {ACENTO}; }}
+    QPushButton#perigo:hover {{ border: 1px solid {ERRO}; color: {ERRO}; }}
 
     /* ---------------- Console de atividade ---------------- */
+    QLabel#consoleTitulo {{
+        color: {TEXTO_FRACO}; font-size: 11px; font-weight: 800; letter-spacing: 1.4px;
+    }}
     QTextEdit#console {{
-        background-color: #06090d;
+        background-color: #070a10;
         border: 1px solid {BORDA};
-        border-radius: 12px;
+        border-radius: 14px;
         color: {TEXTO};
         font-family: 'Cascadia Code', 'Consolas', 'JetBrains Mono', monospace;
         font-size: 13px;
-        padding: 10px;
+        padding: 12px;
+        selection-background-color: {ACENTO2};
     }}
 
-    /* ---------------- Barra de progresso ---------------- */
+    /* ---------------- Barra de progresso / rodapé ---------------- */
     QProgressBar {{
         background-color: {PAINEL};
         border: 1px solid {BORDA};
-        border-radius: 8px;
-        height: 10px;
+        border-radius: 7px;
+        height: 8px;
         text-align: center;
-        color: {TEXTO_FRACO};
-        font-size: 11px;
+        color: transparent;
     }}
     QProgressBar::chunk {{
-        background-color: {ACENTO};
-        border-radius: 8px;
+        background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+            stop:0 {ACENTO2}, stop:1 {ACENTO});
+        border-radius: 7px;
     }}
+    QWidget#rodape {{ border-top: 1px solid {BORDA}; }}
+    QLabel#statusTexto {{ color: {TEXTO_FRACO}; font-size: 12px; }}
 
-    /* ---------------- Diálogos ---------------- */
-    QDialog, QMessageBox {{
-        background-color: {PAINEL};
-    }}
+    /* ---------------- Diálogos / entradas ---------------- */
+    QDialog, QMessageBox {{ background-color: {PAINEL}; }}
     QListWidget {{
-        background-color: #06090d;
+        background-color: #070a10;
         border: 1px solid {BORDA};
         border-radius: 10px;
         padding: 4px;
     }}
-    QListWidget::item {{
-        padding: 7px 8px;
-        border-radius: 6px;
-    }}
-    QListWidget::item:hover {{
-        background-color: {PAINEL_ALTO};
-    }}
-    QListWidget::item:selected {{
-        background-color: {ACENTO2};
-        color: #ffffff;
-    }}
+    QListWidget::item {{ padding: 8px 8px; border-radius: 7px; }}
+    QListWidget::item:hover {{ background-color: {PAINEL_ALTO}; }}
+    QListWidget::item:selected {{ background-color: {ACENTO2}; color: #ffffff; }}
     QLineEdit {{
-        background-color: #06090d;
+        background-color: #070a10;
         border: 1px solid {BORDA_FORTE};
         border-radius: 8px;
-        padding: 8px 10px;
+        padding: 9px 11px;
         color: {TEXTO_FORTE};
+        selection-background-color: {ACENTO2};
     }}
-    QLineEdit:focus {{
-        border: 1px solid {ACENTO};
-    }}
+    QLineEdit:focus {{ border: 1px solid {ACENTO}; }}
 
     /* ---------------- Barras de rolagem ---------------- */
-    QScrollBar:vertical {{
-        background: transparent;
-        width: 10px;
-        margin: 2px;
-    }}
+    QScrollBar:vertical {{ background: transparent; width: 10px; margin: 2px; }}
     QScrollBar::handle:vertical {{
-        background: {BORDA_FORTE};
-        border-radius: 5px;
-        min-height: 30px;
+        background: {BORDA_FORTE}; border-radius: 5px; min-height: 32px;
     }}
     QScrollBar::handle:vertical:hover {{ background: {TEXTO_FRACO}; }}
     QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
-
-    QStatusBar {{
-        color: {TEXTO_FRACO};
-        border-top: 1px solid {BORDA};
+    QScrollBar:horizontal {{ background: transparent; height: 10px; margin: 2px; }}
+    QScrollBar::handle:horizontal {{
+        background: {BORDA_FORTE}; border-radius: 5px; min-width: 32px;
     }}
+    QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{ width: 0; }}
+
     QToolTip {{
         background-color: {PAINEL_ALTO};
         color: {TEXTO_FORTE};
         border: 1px solid {ACENTO};
         border-radius: 6px;
-        padding: 4px 8px;
+        padding: 5px 9px;
     }}
     """
