@@ -21,6 +21,7 @@ As pastas logs\\ e backups\\ sao criadas ao lado do .exe na 1a execucao.
 # Recursos somente-leitura embutidos no executavel.
 datas = [
     ("dados/servicos_seguros.json", "dados"),
+    ("dados/icone.ico", "dados"),  # icone da janela (carregado em gui/app.py)
 ]
 
 # O pacote `wmi` se apoia no pywin32 (win32com). O PyInstaller normalmente
@@ -79,4 +80,6 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    # Icone do proprio arquivo .exe (aparece no Explorer e na barra de tarefas).
+    icon="dados/icone.ico",
 )
