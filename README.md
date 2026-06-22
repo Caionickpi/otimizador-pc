@@ -2,24 +2,29 @@
 
 # ⚙️ Otimizador PC
 
-### Diagnóstico e ajustes **seguros** para Windows 10 e 11 — direto do terminal, em português 🇧🇷
+### Diagnóstico e ajustes **seguros** para Windows 10 e 11 — agora numa **janela premium**, em português 🇧🇷
 
 [![Build do .exe (Windows)](https://github.com/Caionickpi/otimizador-pc/actions/workflows/build.yml/badge.svg)](https://github.com/Caionickpi/otimizador-pc/actions/workflows/build.yml)
-![Versão](https://img.shields.io/badge/vers%C3%A3o-1.6.0-blue)
+![Versão](https://img.shields.io/badge/vers%C3%A3o-2.0.1-blue)
 ![Plataforma](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
-![Interface](https://img.shields.io/badge/TUI-rich%20%2B%20questionary-ff69b4)
+![Interface](https://img.shields.io/badge/janela-PySide6%20%2F%20Qt-41CD52?logo=qt&logoColor=white)
 ![Idioma](https://img.shields.io/badge/idioma-Portugu%C3%AAs%20(BR)-009C3B)
 
 </div>
 
 ---
 
-O **Otimizador PC** é um programa de terminal (TUI) que **diagnostica** o seu
-computador, **recomenda** melhorias com base no hardware real e **aplica
-ajustes seguros** — sempre com **backup**, **confirmação** e **registro em
-log**. O foco número 1 é **segurança**: **toda alteração é reversível** e nada
-acontece sem você aprovar.
+O **Otimizador PC** é um programa que **diagnostica** o seu computador,
+**recomenda** melhorias com base no hardware real e **aplica ajustes seguros**
+— sempre com **backup**, **confirmação** e **registro em log**. O foco número 1
+é **segurança**: **toda alteração é reversível** e nada acontece sem você aprovar.
+
+> 🆕 **Novidade da v2.0 — janela premium.** O programa agora abre numa **janela
+> moderna** (PySide6/Qt): tema escuro, anel de saúde do PC, ações rápidas e
+> barra lateral. Por baixo, é o **mesmo motor seguro** já testado — a interface
+> nova é uma casca visual, não uma reescrita. O modo terminal continua
+> disponível com a flag `--cli`.
 
 > **Fluxo:** 🔍 diagnosticar → 💡 analisar/recomendar → 🛠️ aplicar só o que você escolher *(com backup antes)*.
 
@@ -276,21 +281,39 @@ python main.py
 | 🖱️ **`build.bat`** | **Duplo-clique** no arquivo `build.bat` na raiz do projeto | ✅ Sim |
 | ⌨️ **PyInstaller** | `pyinstaller --noconfirm --clean OtimizadorPC.spec` | ✅ Sim |
 
-O resultado é um único `dist\OtimizadorPC.exe` (modo *onefile*, console). As
-pastas `logs\` e `backups\` são criadas **ao lado do `.exe`** na primeira
-execução. A receita `OtimizadorPC.spec` já embute a whitelist de serviços e os
-*hidden imports* do WMI/pywin32 (como `win32timezone`).
+O resultado é um único `dist\OtimizadorPC.exe` (modo *onefile*, **janela/
+windowed** — sem console preto atrás). As pastas `logs\` e `backups\` são
+criadas **ao lado do `.exe`** na primeira execução. A receita `OtimizadorPC.spec`
+já embute a whitelist de serviços, os *hidden imports* do WMI/pywin32 (como
+`win32timezone`) e a janela PySide6.
+
+### 🖥️ Janela (padrão) × terminal (`--cli`)
+
+| Modo | Como abrir |
+|------|-----------|
+| 🪟 **Janela (padrão)** | Duplo-clique no `OtimizadorPC.exe` (ou `python main.py`) |
+| ⌨️ **Terminal (TUI)** | `OtimizadorPC.exe --cli` (ou `python main.py --cli`) |
+
+Para **aplicar ajustes**, rode como administrador (botão direito → *Executar
+como administrador*); o próprio programa também oferece reabrir elevado via UAC.
 
 ## 🗂️ Estrutura do projeto
 
 ```text
 otimizador-pc/
-├── main.py                     # Ponto de entrada e menu principal
+├── main.py                     # Ponto de entrada (janela | --cli | tarefa)
 ├── config.py                   # Constantes, versão e estado global
 ├── requirements.txt
-├── OtimizadorPC.spec           # Receita de build do PyInstaller
+├── OtimizadorPC.spec           # Receita de build do PyInstaller (windowed)
 ├── build.bat                   # Gera o .exe no Windows (duplo-clique)
+├── SECURITY.md                 # 🔒 Revisão de segurança e postura
 ├── .github/workflows/build.yml # CI: compila o .exe no Windows do GitHub
+├── gui/                        # 🪟 Janela premium (PySide6/Qt) — v2.0
+│   ├── app.py                  # Sobe a QApplication e a janela
+│   ├── janela.py               # Janela principal (barra lateral, painel)
+│   ├── nucleo.py               # Ponte GUI ⇄ backend (thread + diálogos)
+│   ├── widgets.py              # Componentes (cartões, anel de saúde)
+│   └── tema.py                 # Tema escuro premium (paleta + QSS)
 ├── modulos/
 │   ├── diagnostico.py          # Detecção de hardware/software (leitura, rápida)
 │   ├── hardware.py             # Perfil de otimização por máquina (escalabilidade)

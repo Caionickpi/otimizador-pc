@@ -351,14 +351,72 @@ def _sair(estado: config.EstadoApp) -> None:
 # ---------------------------------------------------------------------------
 # main
 # ---------------------------------------------------------------------------
+def _iniciar_gui() -> int:
+    """Sobe a interface gráfica (janela). Em falha de import, cai para a TUI.
+
+    A janela é o modo padrão a partir da v2.0. Se o PySide6 não estiver
+    disponível (ex.: rodando do código-fonte sem as dependências instaladas),
+    avisamos e seguimos no modo terminal, sem quebrar.
+    """
+    try:
+        from gui.app import iniciar
+    except Exception as exc:  # noqa: BLE001 - ausência da GUI nunca derruba o app
+        print(
+            "Não foi possível abrir o modo janela "
+            f"({exc}).\nAbrindo o modo terminal...\n"
+        )
+        return _main_cli()
+    return iniciar()
+
+
 def main() -> int:
-    """Função principal. Retorna o código de saída do processo."""
+    """Ponto de entrada. Decide entre janela (padrão), terminal (--cli) ou tarefa.
+
+    Modos:
+        * ``--tarefa-limpeza`` : execução silenciosa (Tarefa Agendada).
+        * ``--cli`` / ``--terminal`` : interface de terminal (TUI) clássica.
+        * (padrão) : interface gráfica (janela) premium.
+    """
     # Execução silenciosa pela Tarefa Agendada (manutenção automática): roda a
     # limpeza headless e sai, sem abrir a interface.
     if "--tarefa-limpeza" in sys.argv:
         config.garantir_pastas()
         return agendador.executar_limpeza_headless()
 
+    if not any(flag in sys.argv for flag in ("--cli", "--terminal", "--tui")):
+        return _iniciar_gui()
+
+    return _main_cli()
+
+
+def _garantir_console_windows() -> None:
+    """Garante um console utilizável no modo --cli quando o .exe é windowed.
+
+    Como o executável da v2.0 é "windowed" (sem console, para a janela abrir
+    limpa), o modo terminal precisa de um console: tentamos anexar ao console
+    pai (se foi aberto a partir de um cmd/PowerShell) e, se não houver, alocamos
+    um novo. Best-effort: qualquer falha apenas mantém o comportamento atual.
+    """
+    if not sys.platform.startswith("win") or not getattr(sys, "frozen", False):
+        return
+    try:
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        ATTACH_PARENT_PROCESS = 0xFFFFFFFF
+        if not kernel32.AttachConsole(ATTACH_PARENT_PROCESS):
+            kernel32.AllocConsole()
+        # Reconecta os fluxos padrão ao console recém-obtido.
+        sys.stdin = open("CONIN$", "r", encoding="utf-8", errors="replace")
+        sys.stdout = open("CONOUT$", "w", encoding="utf-8", errors="replace")
+        sys.stderr = open("CONOUT$", "w", encoding="utf-8", errors="replace")
+    except Exception:  # noqa: BLE001 - sem console não pode derrubar o programa
+        pass
+
+
+def _main_cli() -> int:
+    """Laço principal do modo terminal (TUI). Retorna o código de saída."""
+    _garantir_console_windows()
     config.garantir_pastas()
     seguranca.configurar_logging()
     seguranca.registrar(f"Iniciando {config.NOME_APP} v{config.VERSAO_APP}.", logging.INFO)

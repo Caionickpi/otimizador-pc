@@ -89,7 +89,7 @@ jobs:
             TAG="${GITHUB_REF_NAME}"
             TARGET_ARG=""
           fi
-          notes=$'📥 Baixe o **OtimizadorPC.exe** na seção *Assets* abaixo — não precisa de Python instalado.\n\n• Duplo-clique para abrir (diagnóstico e recomendações funcionam sem admin).\n• Para aplicar ajustes: clique com o botão direito → **Executar como administrador**.\n\nExecutável para Windows 10/11, compilado automaticamente pelo GitHub Actions.'
+          notes=$'📥 Baixe o **OtimizadorPC.exe** na seção *Assets* abaixo — não precisa de Python instalado.\n\n🆕 **Novidade: janela premium (GUI).** O programa agora abre numa janela moderna (tema escuro, anel de saúde do PC e ações rápidas). O mesmo motor seguro de sempre, agora bonito.\n\n• Duplo-clique para abrir a **janela** (diagnóstico e recomendações funcionam sem admin).\n• Para aplicar ajustes: clique com o botão direito → **Executar como administrador**.\n• Prefere o terminal? Rode `OtimizadorPC.exe --cli`.\n\nExecutável para Windows 10/11, compilado automaticamente pelo GitHub Actions.'
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "dist/OtimizadorPC.exe" --clobber
           else

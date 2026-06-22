@@ -65,7 +65,8 @@ echo   PRONTO! O executavel foi gerado em:
 echo.
 echo       dist\OtimizadorPC.exe
 echo.
-echo   - Da um duplo-clique para abrir.
+echo   - Da um duplo-clique para abrir a JANELA do programa.
+echo   - Para o modo terminal classico:  OtimizadorPC.exe --cli
 echo   - Para aplicar ajustes, rode como administrador
 echo     (clique com o botao direito - "Executar como administrador").
 echo ============================================================
