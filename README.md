@@ -5,7 +5,7 @@
 ### Diagnóstico e ajustes **seguros** para Windows 10 e 11 — agora numa **janela premium**, em português 🇧🇷
 
 [![Build do .exe (Windows)](https://github.com/Caionickpi/otimizador-pc/actions/workflows/build.yml/badge.svg)](https://github.com/Caionickpi/otimizador-pc/actions/workflows/build.yml)
-![Versão](https://img.shields.io/badge/vers%C3%A3o-2.1.0-blue)
+![Versão](https://img.shields.io/badge/vers%C3%A3o-2.2.0-blue)
 ![Plataforma](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![Interface](https://img.shields.io/badge/janela-PySide6%20%2F%20Qt-41CD52?logo=qt&logoColor=white)
@@ -238,18 +238,34 @@ como plano B.
     0)  🚪  Sair
 ```
 
-## 📥 Baixar o executável (.exe) pronto
+## 📥 Baixar e instalar
 
-A forma mais fácil — **não precisa instalar Python**:
+Em **[Releases](https://github.com/Caionickpi/otimizador-pc/releases)**, na versão mais recente:
 
-1. Vá em **[Releases](https://github.com/Caionickpi/otimizador-pc/releases)** e
-   baixe o `OtimizadorPC.exe` da versão mais recente; **ou**
-2. Vá na aba **[Actions](https://github.com/Caionickpi/otimizador-pc/actions/workflows/build.yml)**,
-   abra a execução mais recente e baixe o artifact **`OtimizadorPC-windows`**.
+- **Recomendado — `OtimizadorPC-Setup.exe`** (instalador): cria atalho no Menu
+  Iniciar e desinstalador. Os dados (logs/backups/preferências) ficam em
+  `%LOCALAPPDATA%\OtimizadorPC`, então instalar em *Arquivos de Programas* é
+  seguro e o **“desfazer” continua funcionando**.
+- **Portátil — `OtimizadorPC.exe`** (avulso): roda sem instalar. Para guardar os
+  dados ao lado do `.exe` (ex.: pendrive), crie um arquivo vazio chamado
+  `portable.dat` na mesma pasta.
 
-Depois é só **dar um duplo-clique**. Para aplicar ajustes, clique com o botão
-direito → **“Executar como administrador”** *(o diagnóstico e as recomendações
-funcionam sem admin)*.
+> Nenhuma das opções precisa de Python instalado. Para aplicar ajustes, use
+> **“Executar como administrador”** *(diagnóstico e recomendações funcionam sem admin)*.
+
+### 🧽 Debloat do Windows *(novo)*
+
+Aba dedicada para **tirar os excessos** do Windows, com a mesma segurança de
+sempre (confirmação, backup e *desfazer*):
+
+- **Privacidade & Copilot** *(reversível)*: desativa Copilot, telemetria,
+  widgets, pesquisa Bing no Iniciar, ID de publicidade e sugestões/anúncios.
+- **Apps da Store**: remove *bloatware* pré-instalado (o *desfazer* tenta
+  reinstalar).
+- **Desinstalar programas**: abre o desinstalador oficial do programa escolhido.
+
+> 🛡 **Por princípio, o programa NÃO desativa o Windows Defender / antivírus** —
+> isso exporia você a malware.
 
 ## ▶️ Rodar a partir do código-fonte
 
