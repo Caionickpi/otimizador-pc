@@ -70,6 +70,7 @@ _SECOES: list[tuple[str, list[tuple[str, str, str]]]] = [
     ("Avançado", [
         ("🔥  Otimizações avançadas", "avancado", "Jogos e desempenho (risco médio)"),
         ("🖱  Input lag", "inputlag", "Mouse, teclado e monitor"),
+        ("🧽  Debloat do Windows", "debloat", "Copilot, bloatware e telemetria"),
         ("🎯  Otimizar por jogo", "otimizar_jogo", "Detecta jogos instalados"),
     ]),
     ("Premium", [
@@ -515,7 +516,7 @@ class JanelaPrincipal(QMainWindow):
         e = self.estado
         from modulos import agendador, atualizacao, desempenho, preferencias, recomendacoes, relatorio
         from modulos.tweaks import (
-            avancado, disco, energia, inicializacao, inputlag, limpeza,
+            avancado, debloat, disco, energia, inicializacao, inputlag, limpeza,
             otimizar_jogo, perfis, rede, servicos, visual,
         )
         return {
@@ -530,6 +531,7 @@ class JanelaPrincipal(QMainWindow):
             "disco": lambda: disco.menu(e),
             "avancado": lambda: avancado.menu(e),
             "inputlag": lambda: inputlag.menu(e),
+            "debloat": lambda: debloat.menu(e),
             "otimizar_jogo": lambda: otimizar_jogo.menu(e),
             "saude": lambda: saude.menu(e),
             "perfis": lambda: perfis.menu(e),

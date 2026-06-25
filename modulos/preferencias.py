@@ -15,7 +15,7 @@ from typing import Any
 import config
 from modulos import interface, seguranca
 
-_ARQUIVO = config.PASTA_EXECUCAO / "preferencias.json"
+_ARQUIVO = config.ARQUIVO_PREFERENCIAS
 
 # Padrões de fábrica. Toda preferência nova DEVE entrar aqui com seu padrão.
 PADROES: dict[str, Any] = {

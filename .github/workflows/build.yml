@@ -64,11 +64,30 @@ jobs:
           $mb = [math]::Round((Get-Item $exe).Length / 1MB, 1)
           Write-Host "OK: $exe gerado com sucesso ($mb MB)."
 
-      - name: Publicar o .exe como artifact (download)
+      - name: Instalar o Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Gerar o instalador (Inno Setup)
+        shell: pwsh
+        run: |
+          $ver = (python -c "import config; print(config.VERSAO_APP)").Trim()
+          Write-Host "Compilando instalador para a versao $ver ..."
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$ver" "instalador\OtimizadorPC.iss"
+          $setup = "dist/OtimizadorPC-Setup.exe"
+          if (-not (Test-Path $setup)) {
+            Write-Error "O instalador nao foi gerado em $setup"
+            exit 1
+          }
+          $mb = [math]::Round((Get-Item $setup).Length / 1MB, 1)
+          Write-Host "OK: $setup gerado com sucesso ($mb MB)."
+
+      - name: Publicar os artifacts (download)
         uses: actions/upload-artifact@v4
         with:
           name: OtimizadorPC-windows
-          path: dist/OtimizadorPC.exe
+          path: |
+            dist/OtimizadorPC.exe
+            dist/OtimizadorPC-Setup.exe
           if-no-files-found: error
 
       # Publica um Release com o .exe anexado quando:
@@ -76,7 +95,7 @@ jobs:
       #   * o workflow e' disparado manualmente com um 'tag' informado.
       # Em disparo manual, o proprio runner cria a tag (gh release create
       # --target ...), o que dispensa enviar a tag pelo git.
-      - name: Publicar Release com o .exe
+      - name: Publicar Release com o instalador e o .exe
         if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '')
         shell: bash
         env:
@@ -89,11 +108,11 @@ jobs:
             TAG="${GITHUB_REF_NAME}"
             TARGET_ARG=""
           fi
-          notes=$'📥 Baixe o **OtimizadorPC.exe** na seção *Assets* abaixo — não precisa de Python instalado.\n\n🆕 **Novidade: janela premium (GUI).** O programa agora abre numa janela moderna (tema escuro, anel de saúde do PC e ações rápidas). O mesmo motor seguro de sempre, agora bonito.\n\n• Duplo-clique para abrir a **janela** (diagnóstico e recomendações funcionam sem admin).\n• Para aplicar ajustes: clique com o botão direito → **Executar como administrador**.\n• Prefere o terminal? Rode `OtimizadorPC.exe --cli`.\n\nExecutável para Windows 10/11, compilado automaticamente pelo GitHub Actions.'
+          notes=$'📥 **Recomendado:** baixe o **OtimizadorPC-Setup.exe** (instalador) — cria atalho no Menu Iniciar e desinstalador.\nPrefere portátil? Baixe o **OtimizadorPC.exe** avulso (não precisa de Python).\n\n🆕 **Novidades**\n• 🧽 **Debloat do Windows**: remover Copilot, telemetria, widgets, Bing no Iniciar e apps pré-instalados (bloatware) — tudo reversível.\n• 📦 **Instalador profissional** (Inno Setup) e dados do usuário em %LOCALAPPDATA% (backups/desfazer funcionam mesmo instalado em Arquivos de Programas).\n• 🪟 Janela premium (tema escuro, anel de saúde, efeitos).\n\n• Para aplicar ajustes: **Executar como administrador**.\n• Prefere o terminal? Rode `OtimizadorPC.exe --cli`.\n\n🛡 Por segurança, o programa **não** desativa o Windows Defender.\n\nExecutável para Windows 10/11, compilado automaticamente pelo GitHub Actions.'
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "dist/OtimizadorPC.exe" --clobber
+            gh release upload "$TAG" "dist/OtimizadorPC-Setup.exe" "dist/OtimizadorPC.exe" --clobber
           else
-            gh release create "$TAG" "dist/OtimizadorPC.exe" $TARGET_ARG \
+            gh release create "$TAG" "dist/OtimizadorPC-Setup.exe" "dist/OtimizadorPC.exe" $TARGET_ARG \
               --title "Otimizador PC $TAG" \
               --notes "$notes"
           fi

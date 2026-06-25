@@ -11,6 +11,7 @@ iniciar e exibir mensagens amigáveis mesmo fora do ambiente-alvo.
 
 from __future__ import annotations
 
+import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -20,7 +21,7 @@ from typing import Any
 # Identidade do programa
 # ---------------------------------------------------------------------------
 NOME_APP: str = "Otimizador PC"
-VERSAO_APP: str = "2.1.0"
+VERSAO_APP: str = "2.2.0"
 DESCRICAO_APP: str = "Diagnóstico e ajustes seguros para Windows 10 e 11"
 
 # Nome do executável distribuído (asset do release e alvo da auto-atualização).
@@ -44,21 +45,47 @@ URL_PAGINA_RELEASES: str = f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}/rel
 # Caminhos
 # ---------------------------------------------------------------------------
 # Quando empacotado pelo PyInstaller (sys.frozen), os recursos somente-leitura
-# ficam em sys._MEIPASS, mas as pastas graváveis (logs/backups) precisam ficar
-# ao lado do executável. Fora do empacotamento, tudo fica na raiz do projeto.
+# ficam em sys._MEIPASS. As pastas GRAVÁVEIS (logs/backups/preferências) NÃO
+# podem ficar ao lado do .exe quando ele é instalado em "C:\Program Files"
+# (sem permissão de escrita) — senão os backups e o "desfazer" parariam de
+# funcionar silenciosamente. Por isso usamos a pasta do usuário
+# (%LOCALAPPDATA%\OtimizadorPC), com um modo PORTÁTIL opcional.
+
+
+def _pasta_dados_usuario(execucao: Path) -> Path:
+    """Define a base GRAVÁVEL dos dados do usuário.
+
+    * Modo portátil: se existir um arquivo-marcador ('portable.dat' ou
+      'OtimizadorPC.portable') ao lado do executável, grava ali mesmo — ideal
+      para rodar de um pendrive sem deixar rastros na máquina.
+    * Caso contrário (instalado): %LOCALAPPDATA%\\OtimizadorPC no Windows;
+      ~/.otimizador-pc em outros sistemas.
+    """
+    if (execucao / "portable.dat").exists() or (execucao / "OtimizadorPC.portable").exists():
+        return execucao
+    if sys.platform.startswith("win"):
+        base = os.environ.get("LOCALAPPDATA") or os.environ.get("APPDATA")
+        if base:
+            return Path(base) / "OtimizadorPC"
+    return Path.home() / ".otimizador-pc"
+
+
 if getattr(sys, "frozen", False):  # pragma: no cover - só vale no .exe final
     PASTA_EXECUCAO: Path = Path(sys.executable).resolve().parent
     PASTA_RECURSOS: Path = Path(getattr(sys, "_MEIPASS", PASTA_EXECUCAO))
+    PASTA_DADOS_USUARIO: Path = _pasta_dados_usuario(PASTA_EXECUCAO)
 else:
     PASTA_EXECUCAO = Path(__file__).resolve().parent
     PASTA_RECURSOS = PASTA_EXECUCAO
+    PASTA_DADOS_USUARIO = PASTA_EXECUCAO
 
-PASTA_LOGS: Path = PASTA_EXECUCAO / "logs"
-PASTA_BACKUPS: Path = PASTA_EXECUCAO / "backups"
+PASTA_LOGS: Path = PASTA_DADOS_USUARIO / "logs"
+PASTA_BACKUPS: Path = PASTA_DADOS_USUARIO / "backups"
 PASTA_DADOS: Path = PASTA_RECURSOS / "dados"
 
 ARQUIVO_SERVICOS_SEGUROS: Path = PASTA_DADOS / "servicos_seguros.json"
 ARQUIVO_HISTORICO_DESFAZER: Path = PASTA_BACKUPS / "historico_desfazer.json"
+ARQUIVO_PREFERENCIAS: Path = PASTA_DADOS_USUARIO / "preferencias.json"
 
 # Chave de registro usada por nós para guardar itens de inicialização que o
 # usuário desativou (abordagem reversível: movemos o valor para cá em vez de

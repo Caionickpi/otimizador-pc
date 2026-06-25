@@ -378,6 +378,7 @@ def registrar_desfazer(
             'reg_import'   -> dados['arquivo'] (ou dados['arquivos'])
             'reg_valores'  -> dados['snapshots'] (ajustes avançados)
             'comando'      -> dados['comando'] (lista) [, dados['ok_msg']]
+            'powershell'   -> dados['comando'] (str PowerShell) [, 'ok_msg', 'timeout']
             'servico'      -> dados['nome'], dados['start_original']
             'dns'          -> dados['interface'], dados['dns_original']
             'plano_energia'-> dados['guid_anterior']
@@ -496,6 +497,18 @@ def _aplicar_desfazer(entrada: dict[str, Any]) -> tuple[bool, str]:
             if not cmd:
                 return False, "Nenhum comando de reversão associado a esta ação."
             codigo, _s, err = executar_comando(cmd, timeout=120)
+            if codigo == 0:
+                return True, dados.get("ok_msg", "Alteração revertida com sucesso.")
+            return False, f"Falha ao reverter: {err or codigo}"
+
+        if tipo == "powershell":
+            # Reversão via PowerShell (ex.: reinstalar apps da Store removidos).
+            ps = dados.get("comando")
+            if not ps:
+                return False, "Nenhum comando PowerShell de reversão associado."
+            codigo, _s, err = executar_comando(
+                ps, powershell=True, timeout=int(dados.get("timeout", 300))
+            )
             if codigo == 0:
                 return True, dados.get("ok_msg", "Alteração revertida com sucesso.")
             return False, f"Falha ao reverter: {err or codigo}"
